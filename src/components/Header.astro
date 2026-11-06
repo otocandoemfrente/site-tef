@@ -17,7 +17,7 @@ const isEnFallback = locale === 'pt' && localeSwitchHref === '/en/' && currentPa
 
 <header class="site-header" id="site-header">
   <div class="container site-header__inner">
-    <a href={locale === 'pt' ? '/' : '/en/'} class="wordmark" aria-label={locale === 'pt' ? 'Tocando Em Frente — página inicial' : 'Tocando Em Frente — home page'}>
+   <a href={locale === 'pt' ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}en/`} class="wordmark" aria-label={locale === 'pt' ? 'Tocando Em Frente — página inicial' : 'Tocando Em Frente — home page'}>
       <Image src={logoAzul} alt="Tocando Em Frente" class="wordmark__logo" format="png" />
     </a>
 
