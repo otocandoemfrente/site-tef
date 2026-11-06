@@ -1,0 +1,117 @@
+{
+  "intro": {
+    "titulo": "Uma jornada educacional que amplia referências, desenvolve habilidades e abre novos caminhos.",
+    "texto": "O Tocando em Frente parte de desafios reais que limitam as possibilidades de muitos jovens e responde com uma Jornada educacional — currículo, histórias de referência e experiências práticas — para ampliar perspectivas, desenvolver habilidades e fortalecer o protagonismo de cada estudante."
+  },
+  "centro": {
+    "titulo": "Teoria da Mudança",
+    "texto": "Passe o cursor sobre qualquer ponto do círculo para entender como cada peça se conecta."
+  },
+  "categorias": [
+    {
+      "id": "desafios",
+      "nome": "Desafios",
+      "icone": "alerta",
+      "tituloCompleto": "Falta de referências e oportunidades",
+      "termoOriginal": "Vácuo Inspiracional",
+      "resumo": "A ausência de referências, modelos de sucesso e oportunidades concretas limita o que muitos jovens conseguem imaginar para o próprio futuro — e alimenta um ciclo difícil de romper sozinho.",
+      "itens": [
+        {
+          "id": "falta-interesse",
+          "titulo": "Falta de interesse",
+          "rotulo": "Falta de interesse",
+          "texto": "Sem ver sentido prático nos estudos, o aluno se desengaja — um dos principais motivos de abandono escolar no Brasil."
+        },
+        {
+          "id": "baixo-desempenho",
+          "titulo": "Baixo desempenho acadêmico",
+          "rotulo": "Desempenho\nacadêmico",
+          "texto": "Aspirações e expectativas baixas se refletem diretamente nas notas e na permanência na escola."
+        },
+        {
+          "id": "evasao-escolar",
+          "titulo": "Evasão escolar",
+          "rotulo": "Evasão escolar",
+          "texto": "Quando a escola parece desconectada do futuro, o abandono se torna um caminho mais provável."
+        },
+        {
+          "id": "desigualdades",
+          "titulo": "Perpetuação das desigualdades",
+          "rotulo": "Desigualdades",
+          "texto": "Sem acesso a referências e recursos, as mesmas desigualdades socioeconômicas se repetem entre gerações."
+        },
+        {
+          "id": "ciclo-pobreza",
+          "titulo": "Perpetuação do ciclo de pobreza",
+          "rotulo": "Ciclo de\npobreza",
+          "texto": "Menos oportunidades educacionais hoje significam menos chances de romper com a pobreza amanhã."
+        }
+      ]
+    },
+    {
+      "id": "curriculo",
+      "nome": "Intervenção",
+      "icone": "livro",
+      "resumo": "A resposta do Tocando em Frente: uma Jornada que amplia repertório com um currículo gamificado e histórias reais de quem já rompeu essas barreiras.",
+      "itens": [
+        {
+          "id": "curriculo-habilidades",
+          "titulo": "Currículo de habilidades-chave",
+          "rotulo": "Habilidades-chave",
+          "texto": "Atividades gamificadas e ativas desenvolvem habilidades socioemocionais e conectam o conteúdo escolar a caminhos reais."
+        },
+        {
+          "id": "historias-referencia",
+          "titulo": "Histórias de referência",
+          "rotulo": "Histórias de\nreferência",
+          "texto": "Jovens de diferentes talentos e realidades mostram, na prática, que sonhar alto é possível."
+        }
+      ]
+    },
+    {
+      "id": "mudancas",
+      "nome": "Mudanças",
+      "icone": "crescimento",
+      "resumo": "Com mais repertório e referências, os estudantes ampliam suas perspectivas e passam a enxergar — e buscar — mais possibilidades.",
+      "itens": [
+        {
+          "id": "melhora-desempenho",
+          "titulo": "Melhora no desempenho acadêmico",
+          "rotulo": "Melhor desempenho",
+          "texto": "Mais clareza sobre o próprio futuro se traduz em mais engajamento e melhores resultados escolares."
+        },
+        {
+          "id": "oportunidades",
+          "titulo": "Novas oportunidades acessadas",
+          "rotulo": "Novas oportunidades",
+          "texto": "Os estudantes passam a conhecer e buscar oportunidades em diferentes áreas do conhecimento."
+        }
+      ]
+    },
+    {
+      "id": "impacto",
+      "nome": "Impacto",
+      "icone": "estrela",
+      "resumo": "No médio e longo prazo, essa jornada ajuda a reduzir a evasão escolar e abre caminho para que os próprios estudantes se tornem novas referências.",
+      "itens": [
+        {
+          "id": "protagonismo",
+          "titulo": "Protagonismo e novos caminhos",
+          "rotulo": "Novos caminhos",
+          "texto": "Jovens de escola pública em posições de liderança — novas referências para a próxima geração."
+        },
+        {
+          "id": "menos-evasao",
+          "titulo": "Menos evasão, mais permanência",
+          "rotulo": "Mais permanência",
+          "texto": "Estudantes mais engajados têm mais motivos para continuar na escola."
+        }
+      ]
+    }
+  ],
+  "kumu": {
+    "texto": "A Teoria da Mudança completa do Tocando em Frente — com todas as evidências e referências que embasam este modelo — está disponível para quem quiser se aprofundar.",
+    "cta": "Explorar Teoria da Mudança",
+    "link": "https://kumu.io/AnaGranada/tocando-em-frente-teoria-da-mudanca#vacuo-inspiracional/falta-de-interesse"
+  }
+}

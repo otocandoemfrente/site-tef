@@ -1,0 +1,360 @@
+---
+import type { Locale } from '../i18n/nav';
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import salaImage from '../assets/images/atuacao-sala.jpg';
+import jeanImage from '../assets/images/jean-retrato.jpg';
+import jefersonImage from '../assets/images/jeferson-retrato.jpg';
+import FrenteModule from '../components/FrenteModule.astro';
+import FrenteVisualSteps from '../components/FrenteVisualSteps.astro';
+import AtuacaoCicloHero from '../components/AtuacaoCicloHero.astro';
+import QuoteIcon from '../components/QuoteIcon.astro';
+import AtuacaoMap from '../components/AtuacaoMap.astro';
+import SustentacaoMapa from '../components/SustentacaoMapa.astro';
+import { getContent } from '../i18n/content';
+
+// Idioma da página (pt | en): as rotas em src/pages/ e src/pages/en/ só passam esta prop.
+const locale: Locale = (Astro.props as { locale?: Locale }).locale ?? 'pt';
+const en = locale === 'en';
+const c = getContent(locale);
+const page = c.atuacao;
+const frente02 = c.frente02;
+const momentos = c.momentos;
+const historiaA = c.historiaA;
+const historiaB = c.historiaB;
+const numeros = c.numeros;
+
+const { sustentacao, mapa } = page;
+
+// Título das histórias em duas linhas fixas (a pedido: "o mas super-heróis na linha debaixo"): quebra logo depois
+// da vírgula — "Sem superpoderes," / "mas super-heróis". Sem data-reveal-words (ele reescreve o texto e apagaria os spans).
+const historiasTitulo = page.historias.kicker as string;
+const historiasCorte = historiasTitulo.indexOf(', ');
+const historiasLinhas: string[] =
+  historiasCorte >= 0
+    ? [historiasTitulo.slice(0, historiasCorte + 1), historiasTitulo.slice(historiasCorte + 2)]
+    : [historiasTitulo];
+
+// Números de impacto da Frente 02 (etapas 1 e 3) vêm de numeros.json — mesma fonte única
+// usada na Home — em vez de duplicar "34", "14.272" e "26 de 27" hardcoded no conteúdo da
+// frente (o "estadosCobertos" que existia antes em frente-02.md era exatamente esse mesmo
+// dado duplicado, removido dali por isso).
+// (por posição — o texto do rótulo muda de idioma: 0 estudantes, 1 escolas, 2 estados)
+const [estudantesItem, escolasItem, estadosItem] = numeros.itens as { valor: string }[];
+const numerosPorKey: Record<string, string> = {
+  escolas: escolasItem?.valor ?? '',
+  estudantes: estudantesItem?.valor ?? '',
+};
+
+/*
+  A antiga faixa de destaque azul (DRs formados / DRs ativos / Estados cobertos) saiu por
+  completo, a pedido explícito — as informações se espalharam pelas próprias etapas do esquema
+  visual, mais perto do contexto de cada uma: "estados cobertos" foi pra etapa 1 (Diretores
+  Regionais, pra reforçar "temos DR em 26 dos 27 estados"), "DRs ativos" foi pra etapa 3 (Impacto
+  nacional, ao lado de escolas/estudantes). "DRs formados" saiu de vez — a pedido, por dar
+  impressão de erro/inconsistência (parte de quem se forma nunca chega a aplicar o currículo numa
+  escola, então esse número sozinho mal-representa o impacto real).
+*/
+const frente02Etapa1 = {
+  ...frente02.processo.etapa1,
+  itens: [{ icone: 'mapa', numero: estadosItem?.valor ?? '', texto: en ? 'Brazilian states with young people working as Regional Directors' : 'estados brasileiros com jovens atuando como Diretores Regionais' }],
+};
+const frente02Etapa3 = {
+  ...frente02.processo.etapa3,
+  itens: [
+    ...frente02.processo.etapa3.itens.map((item: { icone: string; numeroKey: string; texto: string }) => ({
+      icone: item.icone,
+      numero: numerosPorKey[item.numeroKey] ?? '',
+      texto: item.texto,
+    })),
+    { icone: 'pessoa', pending: en ? '[PENDING: number of currently active Regional Directors]' : frente02.drAtivosPendente, texto: en ? 'active Regional Directors' : 'diretores regionais ativos' },
+  ],
+};
+
+// Onde / Quem participa / Parceiros removidos a pedido — a Frente 01 fica só com
+// título, tagline e o parágrafo de contexto (mais fotos). "Onde" continua em frente-01.md
+// porque a Home usa esse campo em outro lugar (card de prévia), só não é mais renderizado aqui.
+// Mesmo raciocínio já valia pra Frente 02: Onde/Quem participa/Parceiros saíram porque o
+// esquema visual de 3 etapas já cobre quem participa (etapa 1) e os parceiros (escolas, na
+// etapa 3) — e agora nem sobra a faixa de destaque com os números, redistribuídos acima.
+
+---
+
+<Layout title={page.title} description={page.description} locale={locale}>
+  <AtuacaoCicloHero kicker={page.title} titulo={page.heroTitulo} momentos={momentos.momentos} />
+
+  <section class="complemento" aria-label={en ? 'How we reach schools' : 'Como chegamos às escolas'}>
+    <div class="container">
+      <FrenteModule titulo={frente02.pergunta} tagline={frente02.tagline}>
+        <FrenteVisualSteps slot="contexto" etapa1={frente02Etapa1} etapa2={frente02.processo.etapa2} etapa3={frente02Etapa3} />
+      </FrenteModule>
+      <figure class="atuacao-sala" data-reveal-block>
+        <Image
+          src={salaImage}
+          alt={en ? 'Classroom with students raising their hands while a young woman presents a slide about scientific research on the board.' : 'Sala de aula com estudantes de braço levantado enquanto uma jovem apresenta um slide sobre pesquisa científica no quadro.'}
+          class="atuacao-sala__img"
+          widths={[640, 960, 1280, 1600]}
+          sizes="(min-width: 1152px) 1100px, 94vw"
+        />
+      </figure>
+    </div>
+  </section>
+
+  <section class="sustentacao" aria-labelledby="sustentacao-heading">
+    <div class="container">
+      <SustentacaoMapa numero={sustentacao.numeroVoluntarios} numeroLabel={sustentacao.numeroVoluntariosLabel} kicker={sustentacao.kicker} />
+    </div>
+  </section>
+
+  <section class="mapa" aria-labelledby="mapa-heading">
+    <div class="container">
+      <div data-reveal-block>
+        <AtuacaoMap legendaEscolas={mapa.legendaEscolas} legendaDr={mapa.legendaDr}>
+          <h2 slot="titulo" id="mapa-heading" class="secao-titulo">{mapa.kicker}</h2>
+        </AtuacaoMap>
+      </div>
+    </div>
+  </section>
+
+  <section class="historias" aria-labelledby="historias-heading">
+    <div class="container">
+      <h2 id="historias-heading" class="secao-titulo">
+        {historiasLinhas.map((linha: string) => <span class="secao-titulo__linha">{linha}</span>)}
+      </h2>
+
+      <article class="historia" data-reveal-block>
+        <Image src={jeanImage} alt={historiaA.portraitAlt} class="historia__foto" widths={[160, 240, 320]} sizes="(min-width: 720px) 14rem, 40vw" />
+        <div class="historia__copy">
+          <div class="historia__quote-big">
+            <QuoteIcon class="historia__quote-icon" />
+            <p>{historiaA.citacaoFechamento}</p>
+          </div>
+          <div class="historia__body">{historiaA.relato.map((p: string) => <p>{p}</p>)}</div>
+          <footer class="historia__footer">
+            <p class="historia__author">{historiaA.relatoDe}</p>
+            <p class="historia__location">{historiaA.territorio}</p>
+          </footer>
+        </div>
+      </article>
+
+      <article class="historia" data-reveal-block>
+        <Image src={jefersonImage} alt={historiaB.portraitAlt} class="historia__foto" widths={[160, 240, 320]} sizes="(min-width: 720px) 14rem, 40vw" />
+        <div class="historia__copy">
+          <div class="historia__quote-big">
+            <QuoteIcon class="historia__quote-icon" />
+            <p>{historiaB.citacaoAbertura}</p>
+          </div>
+          <div class="historia__body">{historiaB.relato.map((p: string) => <p>{p}</p>)}</div>
+          <footer class="historia__footer">
+            <p class="historia__author">{historiaB.relatoDe}</p>
+            <p class="historia__location">{historiaB.escola} — {historiaB.territorio}</p>
+          </footer>
+        </div>
+      </article>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  section {
+    padding-block: clamp(3.5rem, 2.5rem + 4vw, 6.5rem);
+  }
+
+  section + section {
+    border-top: 1px solid var(--color-border);
+  }
+
+  /*
+    O hero + o ciclo viraram uma única experiência integrada em AtuacaoCicloHero.astro (seção
+    própria, fora do escopo deste arquivo — por isso não leva as regras genéricas de
+    `section`/`section + section` daqui, que só alcançam elementos que ESTE arquivo renderiza
+    diretamente). .complemento por isso define seu próprio ritmo explicitamente, em vez de
+    depender do `section + section` genérico alcançar através da fronteira do componente.
+  */
+  .complemento {
+    border-top: 1px solid var(--color-border);
+  }
+
+  /*
+    Como isso se sustenta: o layout de duas colunas (número fixo + texto) saiu — vira
+    SustentacaoMapa.astro, um mapa interativo em vez de número+texto lado a lado.
+    Padding bem mais enxuto que o `section` genérico — pedido explícito de reduzir o espaço em
+    branco acima/abaixo do mapa e fazer a composição começar mais perto do cabeçalho; o mapa em
+    si já tem presença visual suficiente (círculo/números grandes), não precisa do respiro
+    generoso que uma seção de texto corrido pede.
+    Quarta rodada — fundo azul institucional em largura cheia (edge-to-edge, não só dentro do
+    `.container`), a pedido explícito de "o azul funcionando como uma grande área visual de
+    impacto" (inspirado na página de Impact & Learning do Global Fund for Children). Mesmo
+    padrão já usado por outras seções escuras full-bleed do site (CTA final, "Seis áreas" da
+    Jornada): a cor entra no `<section>` (que já ocupa a viewport inteira por padrão), o
+    `.container` interno só segue centralizando o conteúdo. `border-top` genérico removido — a
+    própria mudança de cor já funciona como divisória entre as seções, uma borda de 1px cinza
+    ficaria redundante/estranha bem no meio de um bloco sólido.
+  */
+  .sustentacao {
+    padding-block: clamp(1.25rem, 0.75rem + 2vw, 2.5rem);
+    background: var(--color-primary-dark);
+    border-top: none;
+    /* Pop-ups fechados dos times ficam `visibility:hidden` fora do stage (ainda ocupam layout) —
+       a ~730px um deles passava ~65px da borda direita e gerava scroll horizontal na página. */
+    overflow-x: clip;
+  }
+
+  /*
+    Foto da sala de aula (no lugar do print do onboarding), logo depois do bloco "Como chegamos às escolas".
+    A foto original é vertical (3:4): recorte 16:9 centrado na faixa do meio (object-position 55%), onde estão a
+    apresentadora e as mãos levantadas. Moldura reta de 1px; height:auto explícito (o <img> do astro:assets traz
+    width/height do arquivo e venceria o aspect-ratio).
+  */
+  .atuacao-sala {
+    margin: clamp(2rem, 1.5rem + 2vw, 3.5rem) 0 0;
+  }
+
+  .atuacao-sala__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center 55%;
+    border: 1px solid var(--color-border);
+  }
+
+  /* Título de seção grande ("Onde estamos"), mesma receita dos títulos de seção de Contato/Faça Parte. */
+  .secao-titulo {
+    margin: 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: clamp(2.25rem, 1.5rem + 3.5vw, 4.5rem);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-text);
+    max-width: none;
+  }
+
+  /* Menos respiro vertical nesta seção (o mapa já tinha branco de sobra na própria imagem). */
+  .mapa {
+    padding-block: clamp(2rem, 1.25rem + 2.5vw, 4rem);
+  }
+
+  .secao-titulo__linha {
+    display: block;
+  }
+
+  /* Histórias */
+  .historia {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .historia + .historia {
+    margin-top: clamp(3rem, 2rem + 4vw, 5rem);
+    padding-top: clamp(3rem, 2rem + 4vw, 5rem);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /*
+    Retratos reais de Jean e Jeferson (Diretores Regionais) — substituem o MediaPlaceholder que
+    existia aqui. Mesmo padrão já usado em Kauan (index.astro) e Milanna (faca-parte.astro):
+    height:auto explícito antes do aspect-ratio, senão o atributo HTML height do <img> gerado por
+    astro:assets vence silenciosamente. Moldura reta de 1px, igual a qualquer imagem do site.
+  */
+  .historia__foto {
+    display: block;
+    width: 100%;
+    max-width: 14rem;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+  }
+
+  .historia__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  /* Mesmo ajuste: a coluna do grid (span 9 no desktop) já é a largura pretendida. */
+  .historia__copy p {
+    max-width: none;
+  }
+
+  /*
+    Hierarquia da seção, de cima pra baixo: kicker da seção ("Histórias de impacto") → citação
+    grande (maior elemento textual, editorial) → história completa em tamanho de leitura → autor
+    → cidade/estado. Na história A, a citação de abertura ("Eu não tinha um sonho...") saiu por
+    completo (antes vivia integrada ao texto corrido, depois removida a pedido) — o campo
+    `citacaoAbertura` continua em historia-a-cavalcante.md (conteúdo real), só sem uso aqui.
+  */
+  .historia__quote-big {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .historia__quote-icon {
+    color: var(--color-accent);
+    width: 2rem;
+    height: 1.5rem;
+  }
+
+  /*
+    Citação menor que o título da seção (a pedido: "as aspas do Jean estão sobressaindo o título"): era
+    --text-h2 (40px), perto demais dos 60px do título "Sem superpoderes, mas super-heróis" e colada nele.
+    Agora ~30px — ainda é o maior texto DENTRO da história, mas o título volta a mandar.
+  */
+  .historia__quote-big p {
+    font-size: clamp(1.375rem, 1.05rem + 1.2vw, 1.875rem);
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--color-text);
+  }
+
+  /* Respiro entre o título da seção e a primeira história (antes ficavam colados). */
+  .historias .secao-titulo + .historia {
+    margin-top: clamp(2rem, 1.5rem + 2vw, 3.5rem);
+  }
+
+  .historia__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .historia__body p {
+    color: var(--color-text-secondary);
+  }
+
+  .historia__footer {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .historia__author {
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .historia__location {
+    color: var(--color-text-secondary);
+  }
+
+  @media (min-width: 720px) {
+    .historia {
+      grid-template-columns: repeat(var(--grid-columns), 1fr);
+      column-gap: var(--grid-gap);
+    }
+
+    .historia__foto {
+      grid-column: span 3;
+      max-width: none;
+    }
+
+    .historia__copy {
+      grid-column: span 9;
+    }
+  }
+</style>

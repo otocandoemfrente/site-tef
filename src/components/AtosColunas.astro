@@ -1,0 +1,188 @@
+---
+/*
+  Os três atos da Jornada (meses 1 e 2 / 3 e 4 / 5 e 6) como CARTÕES QUE VIRAM — o mesmo esquema de frente e verso
+  dos três cartões de "Em que acreditamos" (Jornada): frente azul-escura com o período, o nome e a pergunta; verso
+  amarelo com "O que acontece" e "Ao final". Vira só com o cursor em cima (ou foco de teclado); no toque, o toque faz
+  o papel do hover. Usado na página Jornada (abaixo da trilha do avatar) e na Home, sempre com o mesmo conteúdo —
+  \`atos.itens\` de conteudo/jornada/jornada.md.
+*/
+interface Ato {
+  nome: string;
+  periodo: string;
+  pergunta: string;
+  acontece: string;
+  final: string;
+}
+
+interface Props {
+  itens: Ato[];
+}
+
+import { localeFromUrl } from '../i18n/locale';
+const { itens } = Astro.props;
+const en = localeFromUrl(Astro.url) === 'en';
+---
+
+<div class="atos__cards">
+  {
+    itens.map((a) => (
+      <article class="ato-flip" tabindex="0" aria-label={`${a.periodo}: ${a.nome}`}>
+        <div class="ato-flip__inner">
+          <div class="ato-flip__face ato-flip__face--front">
+            <p class="ato-flip__periodo">{a.periodo}</p>
+            <h3 class="ato-flip__nome">{a.nome}</h3>
+            <p class="ato-flip__pergunta">{a.pergunta}</p>
+            <p class="ato-flip__hint" aria-hidden="true">{en ? 'Flip →' : 'Virar →'}</p>
+          </div>
+          <dl class="ato-flip__face ato-flip__face--back">
+            <div class="ato-flip__item">
+              <dt>{en ? 'What happens' : 'O que acontece'}</dt>
+              <dd>{a.acontece}</dd>
+            </div>
+            <div class="ato-flip__item">
+              <dt>{en ? 'At the end' : 'Ao final'}</dt>
+              <dd>{a.final}</dd>
+            </div>
+          </dl>
+        </div>
+      </article>
+    ))
+  }
+</div>
+
+<style>
+  .atos__cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .ato-flip {
+    perspective: 1200px;
+    outline-offset: 4px;
+  }
+
+  .ato-flip__inner {
+    display: grid;
+    height: 100%;
+    min-height: 18rem;
+    transition: transform 0.55s ease;
+    transform-style: preserve-3d;
+  }
+
+  .ato-flip:hover .ato-flip__inner,
+  .ato-flip:focus-visible .ato-flip__inner {
+    transform: rotateY(180deg);
+  }
+
+  .ato-flip__face {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+    border: 1px solid var(--color-primary-dark);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Frente azul-escura (texto claro); verso amarelo (escrita azul-escura) — igual aos cartões de "Em que acreditamos". */
+  .ato-flip__face--front {
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+    justify-content: flex-start;
+  }
+
+  .ato-flip__face--back {
+    background: var(--color-accent);
+    color: var(--color-primary-dark);
+    transform: rotateY(180deg);
+    justify-content: center;
+    gap: 1.25rem;
+  }
+
+  .ato-flip__face p {
+    margin: 0;
+    max-width: none;
+  }
+
+  .ato-flip__periodo {
+    font-size: var(--text-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .ato-flip__nome {
+    font-size: var(--text-h2);
+    line-height: var(--leading-h2);
+    font-weight: 700;
+    color: var(--color-bg);
+    margin: 0;
+  }
+
+  .ato-flip__pergunta {
+    font-size: var(--text-h3);
+    line-height: var(--leading-h3);
+    font-weight: 500;
+    color: var(--color-bg);
+  }
+
+  .ato-flip__hint {
+    margin-top: auto !important;
+    padding-top: 1rem;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+
+  .ato-flip__item dt {
+    font-size: var(--text-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .ato-flip__item dd {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  @media (min-width: 720px) {
+    .atos__cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--grid-gap);
+    }
+
+    .ato-flip__inner {
+      min-height: 20rem;
+    }
+  }
+
+  /* Movimento reduzido: sem giro — troca de face por opacidade. */
+  @media (prefers-reduced-motion: reduce) {
+    .ato-flip__inner {
+      transition: none;
+      transform: none !important;
+    }
+
+    .ato-flip__face--back {
+      transform: none;
+      opacity: 0;
+    }
+
+    .ato-flip:hover .ato-flip__face--front,
+    .ato-flip:focus-visible .ato-flip__face--front {
+      opacity: 0;
+    }
+
+    .ato-flip:hover .ato-flip__face--back,
+    .ato-flip:focus-visible .ato-flip__face--back {
+      opacity: 1;
+    }
+  }
+</style>

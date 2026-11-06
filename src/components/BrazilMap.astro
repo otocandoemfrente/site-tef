@@ -1,0 +1,77 @@
+---
+/*
+  Mapa pronto (Isabella fez no MapChart, com as siglas dos estados e os pins
+  amarelos das escolas parceiras já desenhados na própria imagem) — nada de
+  overlay/posicionamento por porcentagem aqui, só a imagem final. O arquivo
+  é um SVG "completo" (mesma técnica do mapa-brasil.svg original: uma imagem
+  raster colorida + uma máscara, combinadas via <mask> do próprio SVG pra dar
+  o fundo transparente — as siglas em si são <path> vetoriais, não texto),
+  então precisa ser usado como arquivo inteiro via <img>, não por
+  astro:assets (que só sabe otimizar raster, e extrair só a camada de cor de
+  dentro do SVG perde a máscara de transparência e os rótulos). Fica em
+  public/imagens/ pelo mesmo motivo do mapa-brasil.svg original.
+
+  Isso substitui a versão anterior deste componente, que tentava recriar
+  siglas+pins em cima de um mapa sem rótulos (ver histórico em CLAUDE.md,
+  "Recalibração de siglas e pins do BrazilMap", pra contexto de por que essa
+  abordagem foi abandonada).
+*/
+import { localeFromUrl } from '../i18n/locale';
+const en = localeFromUrl(Astro.url) === 'en';
+---
+
+<div class="brazil-map">
+  <img
+    src="/imagens/mapa-home.svg"
+    alt={en ? 'Map of Brazil: 26 of the 27 states have Regional Directors, highlighted in blue (Roraima is the only exception). A yellow dot marks the states that also have partner schools.' : 'Mapa do Brasil: 26 dos 27 estados têm Diretores Regionais, destacados em azul (Roraima é a única exceção). Um ponto amarelo marca os estados que também têm escolas parceiras.'}
+    class="brazil-map__img"
+  />
+
+  <ul class="brazil-map__legend">
+    <li><span class="brazil-map__swatch" aria-hidden="true" /> {en ? 'States with Regional Directors' : 'Estados com Diretores Regionais'}</li>
+    <li><span class="brazil-map__swatch brazil-map__swatch--pin" aria-hidden="true" /> {en ? 'States with partner schools' : 'Estados com escolas parceiras'}</li>
+  </ul>
+</div>
+
+<style>
+  .brazil-map {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .brazil-map__img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .brazil-map__legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.25rem;
+    font-size: var(--text-caption);
+    color: var(--color-text-secondary);
+  }
+
+  .brazil-map__legend li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .brazil-map__swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    background: color-mix(in srgb, var(--color-primary) 32%, var(--color-bg));
+    flex: none;
+  }
+
+  .brazil-map__swatch--pin {
+    background: var(--color-accent);
+  }
+</style>

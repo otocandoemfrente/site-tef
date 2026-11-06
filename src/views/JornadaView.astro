@@ -1,0 +1,2136 @@
+---
+import type { Locale } from '../i18n/nav';
+import Layout from '../layouts/Layout.astro';
+import { Image } from 'astro:assets';
+import Icon from '../components/Icon.astro';
+import oficina1 from '../assets/images/jornada-oficina-1.jpg';
+import oficina2 from '../assets/images/jornada-oficina-2.jpg';
+import oficina3 from '../assets/images/jornada-oficina-3.jpg';
+import caderno1 from '../assets/images/caderno-dos-sonhos-1.jpg';
+import caderno2 from '../assets/images/caderno-dos-sonhos-2.jpg';
+import caderno3 from '../assets/images/caderno-dos-sonhos-3.jpg';
+import biriguiImg from '../assets/images/jornada-time-birigui.jpg';
+import dirArtes from '../assets/images/diretoria-artes-jornalismo.jpg';
+import dirPesquisa from '../assets/images/diretoria-pesquisa-olimpiadas.jpg';
+import dirDebates from '../assets/images/diretoria-debates-onu.jpg';
+import dirIngles from '../assets/images/diretoria-ingles-intercambio.jpg';
+import dirRobotica from '../assets/images/diretoria-programacao-robotica.jpg';
+import dirVoluntariado from '../assets/images/diretoria-voluntariado.jpg';
+import AtosColunas from '../components/AtosColunas.astro';
+import douglasImg from '../assets/images/douglas-avatar.png';
+import TeoriaMudancaCirculo from '../components/TeoriaMudancaCirculo.astro';
+import type { ImageMetadata } from 'astro';
+import { getContent } from '../i18n/content';
+
+// Idioma da página (pt | en): as rotas em src/pages/ e src/pages/en/ só passam esta prop.
+const locale: Locale = (Astro.props as { locale?: Locale }).locale ?? 'pt';
+const en = locale === 'en';
+const c = getContent(locale);
+const page = c.jornada;
+const teoriaMudancaData = c.teoria;
+
+/*
+  Página reescrita a partir do doc "TEXTOS DO SITE" (aba JORNADA): sete seções, cada uma com a
+  interação descrita no doc — números que contam um de cada vez, três cartões que viram, linha do
+  tempo com avatar guiado pelo scroll, mock do "jogo da vida", seis Diretorias de Talentos que
+  abrem, controle deslizante antes/depois e o indicador principal com "Ver metodologia". A Teoria
+  da Mudança (círculo) que antes abria a página foi mantida, agora como seção final.
+*/
+const { abertura, jornada, acreditamos, atos, jogo, diretorias, antesDepois, funciona, teoriaMudanca, teoriaMudancaIntro } = page;
+const { centro: tmCentro, categorias: tmCategorias, kumu: tmKumu } = teoriaMudancaData;
+
+function splitHighlight(text: string, highlight: string) {
+  const idx = text.indexOf(highlight);
+  if (idx === -1) return [{ text, highlighted: false }];
+  return [
+    { text: text.slice(0, idx), highlighted: false },
+    { text: highlight, highlighted: true },
+    { text: text.slice(idx + highlight.length), highlighted: false },
+  ].filter((p) => p.text);
+}
+// Cada número da abertura fica por cima de uma foto de oficina (pareadas por posição).
+const fotosNumeros = [
+  { src: oficina1, alt: en ? 'Students around a table building a structure out of sticks, all hands working together' : 'Estudantes em volta de uma mesa montando uma estrutura com palitos, todas as mãos trabalhando juntas' },
+  { src: oficina2, alt: en ? 'Students laughing as a classmate stacks cardboard boxes up to the classroom ceiling' : 'Estudantes rindo enquanto uma colega empilha caixas de papelão até o teto da sala' },
+  { src: oficina3, alt: en ? 'Two students holding tall towers made of colorful straws during a classroom activity' : 'Dois estudantes segurando torres altas feitas de canudos coloridos durante uma atividade em sala' },
+];
+
+const tituloParts = splitHighlight(abertura.titulo, abertura.destaque);
+
+// --- Seis Diretorias de Talentos: mesmas fontes das áreas da Jornada (ordem fixa, sem o OVO) ---
+const areas = c.areas.slice(1); // o 1º é o OVO (não é uma Diretoria)
+// Uma cor por Diretoria (vermelho, verde, amarelo, rosa, roxo, azul) — as quatro primeiras são as mesmas do círculo
+// da Teoria da Mudança; rosa e azul seguem a mesma família vívida. Texto sempre escuro (--color-text).
+// Foto de cada Diretoria, mostrada quando o bloco abre (chave = id da área em conteudo/jornada/areas/*.md).
+// `pos` é o object-position do recorte quadrado, calibrado pra manter o rosto à vista.
+const fotosDiretorias: Record<string, { src: ImageMetadata; alt: string; pos: string }> = {
+  'artes-e-jornalismo': { src: dirArtes, alt: en ? 'Student standing, holding a microphone and a sheet of paper, reading to the class' : 'Estudante em pé segurando um microfone e uma folha de papel, lendo para a turma', pos: 'center 22%' },
+  'pesquisa-e-olimpiadas': { src: dirPesquisa, alt: en ? 'Students gathered around a table doing an experiment with a blue balloon and a cup of liquid' : 'Estudantes reunidos em volta de uma mesa fazendo um experimento com um balão azul e um copo de líquido', pos: 'center 40%' },
+  'debates-e-onu': { src: dirDebates, alt: en ? 'Smiling student seated at a table, with a simulation placard in front that reads Governor of Acre' : 'Estudante sorrindo sentado à mesa, com uma plaquinha de simulação à frente que diz Governador do Acre', pos: 'center 42%' },
+  'ingles-e-intercambio': { src: dirIngles, alt: en ? 'Three smiling students building a tower of colored pieces together on the table' : 'Três estudantes sorrindo e montando juntos uma torre com peças coloridas sobre a mesa', pos: 'center 30%' },
+  'programacao-e-robotica': { src: dirRobotica, alt: en ? 'Smiling student next to a tower of colored blocks on the desk' : 'Estudante sorrindo ao lado de uma torre de blocos coloridos sobre a carteira', pos: 'center 38%' },
+  voluntariado: { src: dirVoluntariado, alt: en ? 'Two people smiling and hugging in a room' : 'Duas pessoas sorrindo e se abraçando em uma sala', pos: 'center 38%' },
+};
+
+// Cores dos ícones de "Medimos também": versões mais fundas da paleta das Diretorias (contraste ≥ 3:1 sobre o fundo claro).
+const funcionaCores = ['#d93a3a', '#3c9a62', '#8f4fd8', '#2f7cc7'];
+
+const diretoriaCores = ['#ED4949', '#B8D58A', '#FFBD28', '#F28BB8', '#B274F1', '#6FA8E8'];
+
+// --- Mock do jogo da vida: posições (% do palco) dos nós do caminho — linhas retas, sem curva ---
+const nodes: Record<string, { x: number; y: number }> = {
+  start: { x: 8, y: 50 },
+  a: { x: 46, y: 24 },
+  b: { x: 46, y: 76 },
+  'a-0': { x: 88, y: 10 },
+  'a-1': { x: 88, y: 38 },
+  'b-0': { x: 88, y: 62 },
+  'b-1': { x: 88, y: 85 },
+};
+const edges: [string, string][] = [
+  ['start', 'a'],
+  ['start', 'b'],
+  ['a', 'a-0'],
+  ['a', 'a-1'],
+  ['b', 'b-0'],
+  ['b', 'b-1'],
+];
+const jogoData = jogo.rodada1.map((r: any) => ({
+  id: r.id,
+  escolha: r.escolha,
+  resultado: r.resultado,
+  proxima: r.proxima,
+  rodada2: r.rodada2,
+}));
+
+---
+
+<Layout title={page.title} description={page.description} locale={locale}>
+  <!-- 1 · Abertura -->
+  <section class="abertura">
+    <div class="container">
+      <p class="caption kicker">{abertura.kicker}</p>
+      <h1 class="abertura__title">
+        {tituloParts.map((part) => (part.highlighted ? <span class="accent-mark">{part.text}</span> : part.text))}
+      </h1>
+      <ul class="numeros" data-numeros aria-label={en ? 'The Journey in numbers' : 'A Jornada em números'} style={`--n:${abertura.numeros.length}`}>
+        {
+          abertura.numeros.map((n: { valor: number; label: string }, i: number) => (
+            <li class="numeros__item" data-numero>
+              {fotosNumeros[i] && <Image src={fotosNumeros[i].src} alt={fotosNumeros[i].alt} class="numeros__foto" widths={[400, 640, 900]} sizes="(min-width: 560px) 30vw, 94vw" />}
+              <div class="numeros__bloco">
+                <span class="numeros__valor" data-numero-valor data-target={n.valor}>{n.valor}</span>
+                <span class="numeros__label">{n.label}</span>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- 2 · Em que acreditamos -->
+  <section class="acreditamos" aria-labelledby="acreditamos-heading">
+    <div class="container">
+      <h2 id="acreditamos-heading" class="acreditamos__titulo" data-reveal-words>{acreditamos.kicker}</h2>
+      <p class="instrucao">{acreditamos.instrucao}</p>
+      <div class="flips">
+        {
+          acreditamos.cartoes.map((c: { frente: string; verso: string }, i: number) => (
+            <button type="button" class="flip" data-flip data-reveal-block style={`transition-delay:${i * 90}ms`}>
+              <span class="flip__inner">
+                <span class="flip__face flip__face--front">
+                  <span class="flip__index" aria-hidden="true">0{i + 1}</span>
+                  <span class="flip__front-text">{c.frente}</span>
+                  <span class="flip__hint" aria-hidden="true">{en ? 'Flip →' : 'Virar →'}</span>
+                </span>
+                <span class="flip__face flip__face--back">
+                  <span class="flip__back-text">{c.verso}</span>
+                </span>
+              </span>
+            </button>
+          ))
+        }
+      </div>
+
+      <div class="base">
+        <button type="button" class="base__toggle" aria-expanded="false" aria-controls="base-teorica" data-base-toggle>
+          {acreditamos.baseTeorica.link} <span aria-hidden="true" class="base__sinal">+</span>
+        </button>
+        <div id="base-teorica" class="base__panel" data-base-panel hidden>
+          <p>{acreditamos.baseTeorica.texto}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JORNADA: faixa azul (os três passos), pra diferenciar do conteúdo teórico antes e depois dela -->
+  <div class="jornada">
+  <section class="jornada-intro" id="jornada" aria-labelledby="jornada-intro-titulo">
+    <div class="container">
+      <h2 id="jornada-intro-titulo" class="jornada-intro__titulo">{jornada.titulo}</h2>
+    </div>
+  </section>
+
+  <!-- PASSO 1: tela de abertura -->
+  <section class="fase" id="fase-1" aria-labelledby="fase-1-titulo">
+    <div class="container">
+      <div class="fase__topo" data-reveal-block>
+        <span class="fase__barra" aria-hidden="true">
+          {jornada.passos.map((_: unknown, i: number) => <i class={i < 1 ? 'on' : ''}></i>)}
+        </span>
+      </div>
+      <div class="fase__corpo" data-reveal-block>
+        <span class="fase__num" aria-hidden="true">{jornada.passos[0].numero}</span>
+        <div class="fase__texto">
+          <h2 id="fase-1-titulo" class="fase__titulo">{jornada.passos[0].titulo}</h2>
+          <p class="fase__missao">{jornada.passos[0].texto}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Comece aqui: o jogo da vida -->
+  <section class="jogo" id="jogo" aria-labelledby="jogo-heading">
+    <div class="container">
+      <h2 id="jogo-heading" class="visually-hidden">{jogo.kicker}</h2>
+
+      <div class="jogo__tela" data-jogo data-reveal-block>
+        <div class="jogo__barra" aria-hidden="true">
+          <span>OVO</span>
+          <span>{en ? 'Game of life' : 'Jogo da vida'}</span>
+          <span class="jogo__barra-tag">{en ? 'Simulation' : 'Simulação'}</span>
+        </div>
+        <div class="jogo__corpo">
+          <div class="jogo__palco" aria-hidden="true">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="jogo__linhas">
+              {
+                edges.map(([from, to]) => (
+                  <line class="jogo__linha" data-edge={`${from}>${to}`} x1={nodes[from].x} y1={nodes[from].y} x2={nodes[to].x} y2={nodes[to].y} vector-effect="non-scaling-stroke" />
+                ))
+              }
+            </svg>
+            {
+              Object.entries(nodes).map(([id, pos]) => (
+                <span class:list={['jogo__no', { 'jogo__no--fim': id.includes('-') }]} data-node={id} style={`left:${pos.x}%; top:${pos.y}%`}></span>
+              ))
+            }
+            <span class="jogo__avatar" data-avatar style={`left:${nodes.start.x}%; top:${nodes.start.y}%`}>
+              <Image src={douglasImg} alt="" class="jogo__avatar-img" width={160} />
+              <span class="jogo__avatar-nome">{jogo.avatarNome}</span>
+            </span>
+          </div>
+
+          <div class="jogo__controles">
+            <p class="jogo__fala" data-fala aria-live="polite">{jogo.inicio}</p>
+            <div class="jogo__escolhas" data-escolhas>
+              {
+                jogoData.map((r: any) => (
+                  <button type="button" class="jogo__escolha" data-opcao={r.id}>
+                    {r.escolha}
+                  </button>
+                ))
+              }
+            </div>
+            <button type="button" class="jogo__reiniciar" data-reiniciar hidden>{jogo.reiniciar}</button>
+          </div>
+        </div>
+      </div>
+      <p class="legenda jogo__notas">
+        <span>{jogo.legenda}</span> <span class="jogo__notas-obs">{jogo.observacao}</span>
+      </p>
+      <script type="application/json" data-jogo-data set:html={JSON.stringify({ rodadas: jogoData, inicio: jogo.inicio, nodes })} />
+
+    </div>
+  </section>
+
+
+  <!-- Fim do passo 1 -->
+  <div class="fase-fim" id="fase-1-fim">
+    <div class="container">
+      <a class="fase-fim__prox" href="#fase-2">{jornada.passos[0].proximo} <span aria-hidden="true">↓</span></a>
+    </div>
+  </div>
+
+  <!-- PASSO 2: tela de abertura -->
+  <section class="fase" id="fase-2" aria-labelledby="fase-2-titulo">
+    <div class="container">
+      <div class="fase__topo" data-reveal-block>
+        <span class="fase__barra" aria-hidden="true">
+          {jornada.passos.map((_: unknown, i: number) => <i class={i < 2 ? 'on' : ''}></i>)}
+        </span>
+      </div>
+      <div class="fase__corpo" data-reveal-block>
+        <span class="fase__num" aria-hidden="true">{jornada.passos[1].numero}</span>
+        <div class="fase__texto">
+          <h2 id="fase-2-titulo" class="fase__titulo">{jornada.passos[1].titulo}</h2>
+          <p class="fase__missao">{jornada.passos[1].texto}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Seis Diretorias de Talentos -->
+  <section class="diretorias" id="diretorias" aria-labelledby="diretorias-heading">
+    <div class="container">
+      <h2 id="diretorias-heading" class="visually-hidden">{diretorias.kicker}</h2>
+      <div class="diretorias__grid">
+        {
+          areas.map((a, i) => (
+            <div class="diretoria" data-diretoria data-reveal-block style={`transition-delay:${i * 60}ms; --dir-bg:${diretoriaCores[i % diretoriaCores.length]}`}>
+              <button type="button" class="diretoria__head" aria-expanded="false" aria-controls={`diretoria-${a.id}`} data-diretoria-toggle>
+                <Icon name={a.icone} class="diretoria__icone" />
+                <span class="diretoria__nome">{a.titulo}</span>
+                <span class="diretoria__sinal" aria-hidden="true">+</span>
+              </button>
+              <div class="diretoria__corpo" id={`diretoria-${a.id}`}>
+                <div class="diretoria__corpo-inner">
+                  {fotosDiretorias[a.id] && (
+                    <Image src={fotosDiretorias[a.id].src} alt={fotosDiretorias[a.id].alt} class="diretoria__foto" style={`object-position:${fotosDiretorias[a.id].pos}`} widths={[320, 480, 700]} sizes="(min-width: 900px) 22rem, 90vw" />
+                  )}
+                  <p>{a.fraseJornada}</p>
+                  <ul class="etiquetas">
+                    {a.etiquetas.map((e: string) => <li class="chip">{e}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      <p class="diretorias__medida">{diretorias.medidaComum}</p>
+    </div>
+  </section>
+
+  <!-- 4 · A Jornada em 3 atos (depois das Diretorias de Talentos, que ela cita) -->
+  <section class="atos" aria-labelledby="atos-heading">
+    <div class="container">
+      <h2 id="atos-heading" class="atos__subtitulo" data-reveal-words>{atos.kicker}</h2>
+      <p class="instrucao">{atos.instrucao}</p>
+
+      <div class="atos__inner" data-atos>
+        <div class="atos__trilha" aria-hidden="true">
+          <div class="atos__linha"><div class="atos__preenchimento" data-atos-fill></div></div>
+          {
+            atos.itens.map((a: { curto: string }, i: number) => (
+              <span class="atos__parada" data-atos-parada style={`left:${((i * 2 + 1) / 6) * 100}%`}>
+                {a.curto}
+              </span>
+            ))
+          }
+          <span class="atos__avatar" data-atos-avatar style={`left:${(1 / 6) * 100}%`}>
+            <Icon name="pessoa" class="atos__avatar-icon" />
+          </span>
+        </div>
+
+        <AtosColunas itens={atos.itens} />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Fim do passo 2 -->
+  <div class="fase-fim" id="fase-2-fim">
+    <div class="container">
+      <a class="fase-fim__prox" href="#fase-3">{jornada.passos[1].proximo} <span aria-hidden="true">↓</span></a>
+    </div>
+  </div>
+
+  <!-- PASSO 3: tela de abertura -->
+  <section class="fase" id="fase-3" aria-labelledby="fase-3-titulo">
+    <div class="container">
+      <div class="fase__topo" data-reveal-block>
+        <span class="fase__barra" aria-hidden="true">
+          {jornada.passos.map((_: unknown, i: number) => <i class={i < 3 ? 'on' : ''}></i>)}
+        </span>
+      </div>
+      <div class="fase__corpo" data-reveal-block>
+        <span class="fase__num" aria-hidden="true">{jornada.passos[2].numero}</span>
+        <div class="fase__texto">
+          <h2 id="fase-3-titulo" class="fase__titulo">{jornada.passos[2].titulo}</h2>
+          <p class="fase__missao">{antesDepois.instrucao}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Antes e depois -->
+  <section class="antes-depois" id="avaliacao" aria-labelledby="antes-depois-heading">
+    <div class="container">
+      <h2 id="antes-depois-heading" class="visually-hidden">{antesDepois.kicker}</h2>
+
+      <div class="comparativos">
+        {
+          antesDepois.instrumentos.map((ins: { nome: string; antes: string; depois: string[] }, i: number) => (
+            <div class="comparativo" data-comparativo data-reveal-block style={`transition-delay:${i * 80}ms`}>
+              <h3 class="comparativo__nome">{ins.nome}</h3>
+              <div class="comparativo__caixa" style="--t:0">
+                <div class="comparativo__camada comparativo__camada--antes">
+                  <p class="comparativo__rotulo">{antesDepois.antesLabel}</p>
+                  <p class="comparativo__texto">{ins.antes}</p>
+                </div>
+                <div class="comparativo__camada comparativo__camada--depois">
+                  <p class="comparativo__rotulo">{antesDepois.depoisLabel}</p>
+                  <ul class="comparativo__lista">
+                    {ins.depois.map((d) => <li>{d}</li>)}
+                  </ul>
+                </div>
+              </div>
+              <label class="comparativo__controle">
+                <span class="visually-hidden">{en ? 'Compare before and after' : 'Comparar antes e depois'} — {ins.nome}</span>
+                <input type="range" min="0" max="100" value="0" step="1" data-slider aria-valuetext={en ? 'Before' : 'Antes'} />
+                <span class="comparativo__escala" aria-hidden="true">
+                  <span>{en ? 'Before' : 'Antes'}</span>
+                  <span>{en ? 'After' : 'Depois'}</span>
+                </span>
+              </label>
+            </div>
+          ))
+        }
+      </div>
+      <p class="legenda legenda--fixa">{antesDepois.legenda}</p>
+      <div class="caderno-fotos">
+        <div class="caderno-fotos__grid">
+          <Image src={caderno1} alt={en ? 'Student smiling and showing the cover of their Dream Notebook, drawn in pencil' : 'Estudante sorrindo e mostrando a capa do seu Caderno dos Sonhos, desenhada a lápis'} class="caderno-fotos__img" widths={[400, 640, 900]} sizes="(min-width: 720px) 22rem, 94vw" />
+          <Image src={caderno2} alt={en ? 'Student smiling and showing the cover of their Dream Notebook, with a colorful drawn butterfly' : 'Estudante sorrindo e mostrando a capa do seu Caderno dos Sonhos, com uma borboleta desenhada e colorida'} class="caderno-fotos__img" widths={[400, 640, 900]} sizes="(min-width: 720px) 22rem, 94vw" />
+          <Image src={caderno3} alt={en ? 'Student with glasses smiling and showing the cover of their Dream Notebook, with a drawing of a girl in a pink dress waving' : 'Estudante de óculos sorrindo e mostrando a capa do seu Caderno dos Sonhos, com o desenho de uma menina de vestido rosa acenando'} class="caderno-fotos__img" widths={[400, 640, 900]} sizes="(min-width: 720px) 22rem, 94vw" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </div>
+
+  <!-- 7 · Como sabemos que funciona (já fora da faixa azul: volta ao fundo claro) -->
+  <section class="funciona" id="funciona" aria-labelledby="funciona-heading">
+    <div class="container">
+      <h2 id="funciona-heading" class="acreditamos__titulo" data-reveal-words>{funciona.kicker}</h2>
+
+      <div class="funciona__principal" data-reveal-block>
+        <p class="funciona__principal-label">{funciona.principalLabel}</p>
+        <p class="funciona__principal-texto">{funciona.principal}</p>
+      </div>
+
+      <figure class="funciona__foto" data-reveal-block>
+        <Image src={biriguiImg} alt={en ? 'Dozens of uniformed students gathered, all looking at the camera, in a covered school courtyard in Birigui' : 'Dezenas de estudantes uniformizados reunidos, todos olhando para a câmera, em um pátio coberto de escola em Birigui'} class="funciona__foto-img" widths={[640, 1024, 1600]} sizes="(min-width: 1200px) 1100px, 94vw" />
+      </figure>
+
+      <div class="funciona__tambem" data-reveal-block style="transition-delay:100ms">
+        <p class="funciona__tambem-label">{funciona.tambemLabel}</p>
+        <ul class="funciona__lista">
+          {
+            funciona.tambem.map((t: { nome: string; icone: any }, i: number) => (
+              <li class="funciona__item" style={`--ic:${funcionaCores[i % funcionaCores.length]}`}>
+                <Icon name={t.icone} class="funciona__icone" />
+                <span>{t.nome}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="funciona__metodologia">
+        <button type="button" class="btn btn-outline-dark" aria-expanded="false" aria-controls="metodologia" data-metodologia-toggle>
+          {funciona.metodologiaBotao}
+        </button>
+        <div id="metodologia" class="funciona__metodologia-texto" data-metodologia hidden>
+          <p>{funciona.metodologia}</p>
+
+          <h3 class="metodo__titulo">{funciona.instrumentosTitulo}</h3>
+          <ul class="metodo__lista">
+            {
+              funciona.instrumentos.map((ins: { eixo: string; nome: string; oQue: string; criterios: string; quando: string }) => (
+                <li class="metodo__item">
+                  <p class="metodo__eixo">{ins.eixo}</p>
+                  <p class="metodo__nome">{ins.nome}</p>
+                  <p>{ins.oQue}</p>
+                  <p><strong>{en ? 'How we score it:' : 'Como avaliamos:'}</strong> {ins.criterios}</p>
+                  <p><strong>{en ? 'When:' : 'Quando:'}</strong> {ins.quando}</p>
+                </li>
+              ))
+            }
+          </ul>
+
+          <h3 class="metodo__titulo">{funciona.acompanhamentoTitulo}</h3>
+          <ul class="metodo__acomp">
+            {
+              funciona.acompanhamento.map((a: { quando: string; texto: string }) => (
+                <li>
+                  <span class="metodo__quando">{a.quando}</span>
+                  <span>{a.texto}</span>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Teoria da Mudança: o modelo por trás de tudo, por último pra a leitura seguir uma linha só (sem voltar) -->
+  <section class="teoria-final" id="teoria-da-mudanca" aria-label={en ? 'Theory of Change' : 'Teoria da Mudança'}>
+    <div class="container">
+      <div class="teoria-final__corpo">
+        <TeoriaMudancaCirculo
+          kicker={teoriaMudanca.kicker}
+          lede={tmCentro.texto}
+          centro={tmCentro}
+          categorias={tmCategorias}
+          kumu={tmKumu}
+        />
+      </div>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  section {
+    padding-block: clamp(3.5rem, 2.5rem + 4vw, 6.5rem);
+  }
+
+  section + section {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .instrucao {
+    margin-top: 0.75rem;
+    color: var(--color-text-secondary);
+    font-size: var(--text-caption);
+    max-width: var(--measure);
+  }
+
+  .legenda {
+    margin-top: 1rem;
+    font-size: var(--text-caption);
+    color: var(--color-text-secondary);
+    font-style: italic;
+    max-width: var(--measure);
+  }
+
+  .chip {
+    border: 1px solid var(--color-border);
+    padding: 0.25rem 0.65rem;
+    font-size: var(--text-caption);
+    background: var(--color-bg);
+  }
+
+  /* ===== 1 · Abertura ===== */
+  /* O respiro vertical fica no container (não na seção): a camada de brilhos (::before) é o primeiro filho e precisa
+     começar no topo exato da seção, senão aparece uma borda reta onde o brilho é cortado. */
+  .abertura {
+    border-top: none;
+    /* zera o padding-block genérico de <section> (global.css): sem isso o ::before começava ~80px abaixo do topo e o brilho
+       aparecia cortado numa borda reta, e sobrava um vazio grande antes do título. */
+    padding-block: 0;
+  }
+
+  .abertura > .container {
+    padding-block: clamp(2.5rem, 2rem + 2vw, 4rem) clamp(2.5rem, 2rem + 2vw, 4rem);
+  }
+
+  .abertura .kicker {
+    color: var(--color-accent);
+  }
+
+  /* Sem marcador amarelo (obrigava texto escuro sobre o azul e atrapalhava a leitura): o trecho em destaque fica só em
+     amarelo-limão, como TEXTO sobre o azul (~7,6:1). */
+  .abertura .accent-mark {
+    background: transparent;
+    padding: 0;
+    color: var(--color-accent);
+  }
+
+  /* A abertura já é azul: o "Antes de começar" que vem logo depois (fundo claro) não precisa de linha em cima. */
+  .abertura + section {
+    border-top: none;
+  }
+
+  /* Título grande e numa linha só: a frase tem ≈17em de largura, então a fonte acompanha a largura do container
+     (100vw - margens, limitada a 72rem) dividida por 17,4 — ≈56px em 1024px, ≈64px em 1440px; no celular fica no piso de
+     1,875rem e quebra normalmente. */
+  .abertura__title {
+    margin-top: 1rem;
+    color: var(--color-bg);
+    max-width: none;
+    font-size: clamp(1.875rem, calc(min(100vw - 3rem, 69.5rem) / 17.4), 4.25rem);
+    line-height: 1.12;
+  }
+
+  /* ===== Faixa azul da Jornada =====
+     Os três passos (jogo da vida → Diretorias de Talentos → avaliação de impacto) ficam dentro de uma faixa de fundo
+     azul-escuro, pra diferenciar do conteúdo teórico (fundo claro) antes e depois dela. Dentro dela os textos soltos
+     ficam claros; os componentes que já têm fundo próprio (quadro do jogo, cartões das Diretorias, caixas amarelas do
+     antes e depois) seguem como estão. */
+  /* Fundo azul-escuro com o azul claro "misturado na tela inteira": uma camada (::before) com vários brilhos
+     radiais de azul claro (#6FA8E8 translúcido) fica presa ao viewport (position: sticky) e acompanha a leitura — então a
+     mistura de azul aparece em toda a tela, não só de cima pra baixo. A camada não ocupa espaço (altura 100vh com margem
+     negativa igual) e o overflow é recortado com `clip` (que, ao contrário de `hidden`, não quebra o sticky). Azul claro
+     #7FB4EE com picos de opacidade .5 (antes .34 com #6FA8E8) — mais claro; nos picos o texto claro cai pra ~4:1 e o
+     amarelo-limão pra ~3:1, então os brilhos ficam nos cantos/bordas, longe da coluna principal de texto. */
+  /* A abertura da página (título + os três números sobre fotos) usa o MESMO fundo da faixa da Jornada: assim a página abre
+     em azul, o "Antes de começar" fica em fundo claro e a Jornada volta ao azul. */
+  .jornada,
+  .abertura {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+    --jornada-linha: rgba(250, 248, 244, 0.22);
+  }
+
+  .jornada::before,
+  .abertura::before {
+    content: '';
+    position: sticky;
+    top: 0;
+    display: block;
+    height: 100vh;
+    margin-bottom: -100vh;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(58% 62% at 88% 8%, rgba(127, 180, 238, 0.5), transparent 72%),
+      radial-gradient(52% 58% at 6% 52%, rgba(127, 180, 238, 0.32), transparent 72%),
+      radial-gradient(62% 58% at 78% 100%, rgba(127, 180, 238, 0.45), transparent 72%),
+      radial-gradient(45% 45% at 40% 40%, rgba(44, 92, 130, 0.55), transparent 75%);
+  }
+
+  .jornada section + section,
+  .jornada section {
+    border-top-color: var(--jornada-linha);
+  }
+
+  .jornada .kicker {
+    color: var(--color-accent);
+  }
+
+  .jornada .instrucao,
+  .jornada .legenda,
+  .jornada .jogo__texto,
+  .jornada .diretorias__medida,
+  .jornada .comparativo__escala {
+    color: rgba(250, 248, 244, 0.8);
+  }
+
+  .jornada .comparativo__nome {
+    color: var(--color-bg);
+  }
+
+  .jornada .caderno-fotos__img {
+    border-color: var(--jornada-linha);
+  }
+
+  /* O quadro do jogo (off-white) ganha uma moldura clara pra não se perder no azul, e o texto dentro dele volta a ser escuro. */
+  .jornada .jogo__tela {
+    border-color: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  /* Caixas amarelas do antes e depois: texto escuro (herdaria o claro da faixa). */
+  .jornada .comparativo__camada {
+    color: var(--color-text);
+  }
+
+  .jornada .diretorias__medida {
+    border-top-color: var(--jornada-linha);
+  }
+
+  /* Linha do tempo dos 3 atos: traço claro, parada alcançada em amarelo-limão (azul sobre azul sumiria). */
+  .jornada .atos__linha {
+    background: var(--jornada-linha);
+  }
+
+  .jornada .atos__preenchimento {
+    background: var(--color-accent);
+  }
+
+  .jornada .atos__parada {
+    border-color: var(--jornada-linha);
+  }
+
+  .jornada .atos__parada.is-reached {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-text);
+  }
+
+  /* Cartões dos 3 atos dentro da faixa azul: frente branca e verso amarelo clarinho (--color-accent bem diluído em branco), com texto azul-escuro. */
+  .jornada :global(.ato-flip__face) {
+    border-color: transparent;
+  }
+
+  .jornada :global(.ato-flip__face--front) {
+    background: #fff;
+    color: var(--color-primary-dark);
+  }
+
+  .jornada :global(.ato-flip__face--front .ato-flip__periodo),
+  .jornada :global(.ato-flip__face--front .ato-flip__nome),
+  .jornada :global(.ato-flip__face--front .ato-flip__pergunta),
+  .jornada :global(.ato-flip__face--front .ato-flip__hint) {
+    color: var(--color-primary-dark);
+  }
+
+  .jornada :global(.ato-flip__face--back) {
+    background: color-mix(in srgb, var(--color-accent) 38%, #fff);
+    color: var(--color-primary-dark);
+  }
+
+  /* O conteúdo de cada passo vem colado na tela de abertura: sem a linha de divisão e com pouca folga em cima. */
+  .fase + section {
+    border-top: none;
+    padding-top: clamp(0.75rem, 0.5rem + 1vw, 1.5rem);
+  }
+
+  /* Texto de abertura da faixa. */
+  .jornada-intro {
+    border-top: none;
+    padding-block: clamp(3rem, 2.25rem + 3.5vw, 5.5rem) clamp(1.5rem, 1rem + 2vw, 2.5rem);
+  }
+
+  /* Só o título, grande e em amarelo-limão (--color-accent sobre --color-primary-dark: ~7,6:1). */
+  .jornada-intro__titulo {
+    margin: 0;
+    font-size: clamp(2.75rem, 1.75rem + 5vw, 6rem);
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+    font-weight: 800;
+    color: var(--color-accent);
+  }
+
+  .jornada-intro__texto {
+    margin: 1rem 0 0;
+    max-width: 52ch;
+    font-size: var(--text-h3);
+    line-height: 1.35;
+    color: rgba(250, 248, 244, 0.85);
+  }
+
+  /* ===== Os três passos: telas de abertura entre as seções =====
+     Cada fase abre com uma tela de nível (numeral enorme, "Fase N de 3", barra de progresso e a missão) e fecha com
+     "Fase concluída ✓" + o link pra próxima. Só traço reto, azul da TEF e o amarelo-limão do acento. */
+  .fase {
+    border-top: 2px solid var(--color-accent);
+    padding-block: clamp(2.5rem, 2rem + 3vw, 4.5rem) clamp(1.5rem, 1rem + 2vw, 2.5rem);
+  }
+
+  .fase__topo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+  }
+
+  .fase__kicker {
+    margin: 0;
+    font-size: var(--text-caption);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+
+  /* Barra de progresso em três segmentos retos: os já alcançados ficam cheios. */
+  .fase__barra {
+    display: flex;
+    gap: 4px;
+  }
+
+  .fase__barra i {
+    display: block;
+    width: 2.25rem;
+    height: 6px;
+    background: rgba(250, 248, 244, 0.22);
+  }
+
+  .fase__barra i.on {
+    background: var(--color-accent);
+  }
+
+  .fase__corpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(0.75rem, 0.5rem + 1vw, 1.5rem);
+    /* Texto do lado do numeral centralizado na vertical com ele. */
+    align-items: center;
+  }
+
+  .fase__num {
+    justify-self: start;
+    font-size: clamp(6rem, 4rem + 9vw, 11rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    color: var(--color-accent);
+  }
+
+  /* Título do passo numa linha só (sem largura máxima); só quebra se a tela for realmente estreita. */
+  .fase__titulo {
+    margin: 0;
+    max-width: none;
+    color: var(--color-bg);
+  }
+
+  .fase__missao {
+    margin: 0.75rem 0 0;
+    max-width: none;
+    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
+    line-height: 1.35;
+    color: rgba(250, 248, 244, 0.85);
+  }
+
+  @media (min-width: 720px) {
+    .fase__corpo {
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: clamp(1.5rem, 1rem + 3vw, 4rem);
+    }
+  }
+
+  /* Fim de fase: uma tira discreta com o "concluída" e a porta pra próxima. */
+  .fase-fim {
+    border-top: 1px solid var(--jornada-linha, var(--color-border));
+    padding-block: 1rem;
+  }
+
+  .fase-fim > .container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .fase-fim__prox {
+    font-size: var(--text-caption);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .fase-fim__prox:hover {
+    text-decoration: underline;
+  }
+
+  /* Âncoras: não ficar escondido atrás do cabeçalho fixo. */
+  #fase-1,
+  #fase-2,
+  #fase-3,
+  #jogo,
+  #diretorias,
+  #avaliacao {
+    scroll-margin-top: var(--header-height);
+  }
+
+  /* Caderno dos Sonhos: duas fotos reais abaixo dos comparativos de antes e depois. */
+  .caderno-fotos {
+    margin-top: clamp(2rem, 1.5rem + 2vw, 3.5rem);
+  }
+
+  .caderno-fotos__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);
+  }
+
+  .caderno-fotos__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+  }
+
+  @media (min-width: 720px) {
+    .caderno-fotos__grid {
+      grid-template-columns: repeat(3, minmax(0, 22rem));
+    }
+  }
+
+  /* Abertura: cada número fica POR CIMA de uma foto de oficina, centralizado no cartão, com o rótulo logo abaixo.
+     A foto é esmaecida (opacidade baixa sobre o off-white) pra não competir com as letras; nada de bloco ou
+     etiqueta atrás do texto. Moldura reta de 1px. */
+  .numeros {
+    list-style: none;
+    margin: clamp(2rem, 1.5rem + 2vw, 3rem) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);
+  }
+
+  .numeros__item {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    aspect-ratio: 4 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 0.75rem + 1vw, 1.5rem);
+    /* Sem fundo próprio: a foto (opacidade baixa) fica transparente POR CIMA do azul da abertura, não sobre o branco. */
+    background: transparent;
+    /* sem borda (pedido: nada de contorno branco em volta das três fotos) */
+    border: 0;
+    text-align: center;
+    transition: opacity 0.4s ease, transform 0.4s ease, translate 0.2s ease;
+  }
+
+  .numeros__item:hover {
+    translate: 0 -4px;
+  }
+
+  .numeros__foto {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.35;
+  }
+
+  .numeros__bloco {
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .numeros__valor {
+    font-size: clamp(4rem, 3rem + 4vw, 6.5rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .numeros__label {
+    font-size: var(--text-h3);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-bg);
+    max-width: 16ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .numeros__item:hover {
+      translate: none;
+    }
+  }
+
+  /* Contagem em sequência: sem JS (ou com movimento reduzido) tudo já aparece no valor final. */
+  .numeros.is-seq-ready .numeros__item {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  .numeros.is-seq-ready .numeros__item.is-on {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (min-width: 720px) {
+    .numeros {
+      grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+    }
+
+    .numeros__item {
+      aspect-ratio: 3 / 4;
+    }
+  }
+
+  /* ===== 2 · Em que acreditamos ===== */
+  /* (O mesmo estilo vale pro título de "Como sabemos que funciona".) Título da seção no mesmo tamanho/peso do título da abertura ("Uma escola mais divertida e atrativa."), em cor escura
+     porque a seção é de fundo claro. */
+  .acreditamos__titulo,
+  .funciona__titulo {
+    margin: 0;
+    font-size: clamp(1.875rem, 1.4rem + 2vw, 3rem);
+    line-height: 1.12;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-text);
+  }
+  .flips {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    margin-top: 2rem;
+  }
+
+  .flip {
+    appearance: none;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    perspective: 1200px;
+    font: inherit;
+    color: inherit;
+  }
+
+  .flip__inner {
+    display: grid;
+    min-height: 16rem;
+    transition: transform 0.55s ease;
+    transform-style: preserve-3d;
+  }
+
+  /* Vira só com o cursor em cima (ou foco de teclado) — sem clique. No toque, o toque faz o papel do hover. */
+  .flip:hover .flip__inner,
+  .flip:focus-visible .flip__inner {
+    transform: rotateY(180deg);
+  }
+
+  .flip__face {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+    border: 1px solid var(--color-primary-dark);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Frente AZUL (texto claro) e verso AMARELO (escrita azul-escura) — a pedido: o cartão muda de cor ao virar. */
+  .flip__face--front {
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+    justify-content: space-between;
+  }
+
+  .flip__face--back {
+    background: var(--color-accent);
+    color: var(--color-primary-dark);
+    transform: rotateY(180deg);
+    justify-content: center;
+  }
+
+  .flip:hover .flip__face--front,
+  .flip:focus-visible .flip__face--front {
+    border-color: var(--color-accent);
+  }
+
+  .flip__index {
+    font-size: var(--text-caption);
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .flip__front-text {
+    font-size: var(--text-h2);
+    line-height: var(--leading-h2);
+    font-weight: 600;
+    color: var(--color-bg);
+  }
+
+  .flip__hint {
+    font-size: var(--text-caption);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  .flip__back-text {
+    font-size: var(--text-h3);
+    line-height: var(--leading-h3);
+  }
+
+  @media (min-width: 720px) {
+    .flips {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .flip__inner {
+      min-height: 20rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flip__inner {
+      transition: none;
+      transform: none !important;
+    }
+
+    .flip__face {
+      transition: none;
+    }
+
+    .flip__face--back {
+      transform: none;
+      opacity: 0;
+    }
+
+    .flip:hover .flip__face--front,
+    .flip:focus-visible .flip__face--front {
+      opacity: 0;
+    }
+
+    .flip:hover .flip__face--back,
+    .flip:focus-visible .flip__face--back {
+      opacity: 1;
+    }
+  }
+
+  .base {
+    margin-top: 2rem;
+  }
+
+  .base__toggle {
+    appearance: none;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--color-primary);
+    padding: 0.25rem 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+  }
+
+  .base__toggle:hover {
+    color: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+  }
+
+  .base__sinal {
+    display: inline-block;
+    margin-left: 0.35rem;
+    transition: transform 0.2s ease;
+  }
+
+  .base__toggle[aria-expanded='true'] .base__sinal {
+    transform: rotate(45deg);
+  }
+
+  .base__panel {
+    margin-top: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-left: 2px solid var(--color-primary);
+    background: color-mix(in srgb, var(--color-border) 30%, var(--color-bg));
+    max-width: var(--measure);
+  }
+
+  .base__panel[hidden] {
+    display: none;
+  }
+
+  /* "A Jornada em 3 atos": mesmo tamanho/peso do título do passo ("Conheça as Diretorias de Talentos") — herda o h2 global, como .fase__titulo. */
+  .atos__subtitulo {
+    margin: 0;
+    color: var(--color-bg);
+  }
+
+  /* ===== 3 · A Jornada em 3 atos ===== */
+  .atos__inner {
+    margin-top: 2.5rem;
+  }
+
+  .atos__trilha {
+    position: relative;
+    height: 3.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .atos__linha {
+    position: absolute;
+    left: calc(100% / 6);
+    right: calc(100% / 6);
+    top: 50%;
+    height: 2px;
+    background: var(--color-border);
+    transform: translateY(-50%);
+  }
+
+  .atos__preenchimento {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+  }
+
+  .atos__parada {
+    position: absolute;
+    top: 50%;
+    min-width: 2.75rem;
+    height: 1.75rem;
+    padding-inline: 0.35rem;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--color-border);
+    background: var(--color-bg);
+    font-size: var(--text-caption);
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    transition: border-color 0.25s ease, color 0.25s ease, background-color 0.25s ease;
+  }
+
+  .atos__parada.is-reached {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  .atos__avatar {
+    position: absolute;
+    top: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    border: 1px solid var(--color-text);
+    z-index: 1;
+  }
+
+  .atos__avatar :global(.atos__avatar-icon) {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .diretoria__corpo,
+    .base__sinal {
+      transition: none;
+    }
+  }
+
+  /* ===== 4 · Jogo da vida ===== */
+  .jogo__texto {
+    margin-top: 1rem;
+    font-size: var(--text-h3);
+    line-height: var(--leading-h3);
+    color: var(--color-text-secondary);
+    max-width: 40rem;
+  }
+
+  .jogo__tela {
+    margin-top: 0.25rem;
+    /* Folga embaixo pro Douglas (e a etiqueta com o nome) sobressaírem no ponto mais baixo (b-1, y 85%: sobressai ≈26px)
+       sem tocar a legenda — era 4,5rem; com o ponto subido a legenda pôde chegar bem mais perto do quadro. */
+    margin-bottom: 2.25rem;
+    border: 1px solid var(--color-text);
+    background: var(--color-bg);
+  }
+
+  .jogo__barra {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    /* Barra do quadro: amarelo-limão com a escrita azul-escura (a pedido). */
+    background: var(--color-accent);
+    color: var(--color-primary-dark);
+    font-size: var(--text-caption);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .jogo__barra-tag {
+    margin-left: auto;
+    color: var(--color-primary-dark);
+  }
+
+  .jogo__corpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .jogo__palco {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    /* Sem overflow:hidden de propósito: nos pontos de cima e de baixo o Douglas sobressai do quadro
+       em vez de ser cortado pela borda. */
+  }
+
+  /*
+    Cenário da história (cidade pequena: escola à esquerda, praça com igreja em cima, casas embaixo —
+    public/imagens/jogo-cidade.svg) numa camada semitransparente atrás de tudo: o Douglas, as linhas
+    e os nós pintam por cima (são elementos posicionados que vêm depois no DOM), então o cenário
+    ambienta sem competir com o personagem.
+  */
+  .jogo__palco::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/imagens/jogo-cidade.svg') center / cover no-repeat;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .jogo__linhas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .jogo__linha {
+    stroke: rgba(21, 42, 56, 0.3);
+    stroke-width: 3;
+    transition: stroke 0.3s ease;
+  }
+
+  .jogo__linha.is-traveled {
+    stroke: var(--color-primary);
+  }
+
+  .jogo__no {
+    position: absolute;
+    width: 0.9rem;
+    height: 0.9rem;
+    transform: translate(-50%, -50%);
+    background: var(--color-bg);
+    border: 2px solid var(--color-text-secondary);
+    transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+  }
+
+  .jogo__no--fim {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .jogo__no.is-traveled {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  .jogo__no.is-dim {
+    opacity: 0.35;
+  }
+
+  .jogo__avatar {
+    position: absolute;
+    /* O Douglas (ilustração do time, sem fundo) anda sozinho pelo palco; o nome fica numa etiqueta embaixo. */
+    width: clamp(3.25rem, 2.5rem + 3vw, 4.75rem);
+    transform: translate(-50%, -62%);
+    transition: left 0.7s ease, top 0.7s ease;
+    z-index: 2;
+    filter: drop-shadow(0 3px 4px rgba(21, 42, 56, 0.25));
+  }
+
+  .jogo__avatar :global(.jogo__avatar-img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .jogo__avatar-nome {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.1rem 0.45rem;
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .jogo__controles {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+    /* altura fixa no celular (a coluna vira linha abaixo do palco); no desktop o .jogo__corpo manda */
+    height: 21rem;
+    min-height: 0;
+  }
+
+  /*
+    O quadro do mock tem altura FIXA — não cresce nem encolhe conforme o texto da história. A fala
+    ocupa o espaço que sobra (flex: 1) e, no pior caso, rola por dentro; com a fonte menor, todas as
+    falas cabem sem rolar (conferido percorrendo os 6 estados do jogo).
+  */
+  .jogo__fala {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    font-size: clamp(0.9375rem, 0.9rem + 0.2vw, 1.0625rem);
+    line-height: 1.5;
+    font-weight: 500;
+    max-width: none;
+  }
+
+  .jogo__escolhas {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* :global porque os botões da 2ª rodada em diante são criados pelo script (sem o atributo de escopo do Astro) —
+     com seletor escopado só os da primeira rodada ficavam estilizados e os demais caíam no botão padrão do navegador. */
+  .jogo__escolhas :global(.jogo__escolha) {
+    appearance: none;
+    text-align: left;
+    padding: 0.7rem 0.9rem;
+    font-size: var(--text-caption);
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary);
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-on-primary);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  /* Azul por padrão, amarelo quando o cursor passa (ou o teclado foca) — a pedido. */
+  .jogo__escolhas :global(.jogo__escolha:hover),
+  .jogo__escolhas :global(.jogo__escolha:focus-visible) {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-on-accent);
+    transform: translateX(4px);
+  }
+
+  .jogo__reiniciar {
+    appearance: none;
+    align-self: flex-start;
+    background: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    padding: 0.7rem 1.1rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-on-primary);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .jogo__reiniciar:hover,
+  .jogo__reiniciar:focus-visible {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  .jogo__reiniciar[hidden] {
+    display: none;
+  }
+
+  @media (min-width: 900px) {
+    .jogo__corpo {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    }
+
+    .jogo__corpo {
+      height: 24rem;
+    }
+
+    .jogo__controles {
+      height: 100%;
+    }
+
+    .jogo__palco {
+      aspect-ratio: auto;
+      height: 100%;
+      min-height: 0;
+      border-bottom: none;
+      border-right: 1px solid var(--color-border);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jogo__avatar,
+    .jogo__linha,
+    .jogo__no,
+    .jogo__escolhas :global(.jogo__escolha) {
+      transition: none;
+    }
+  }
+
+  /* ===== 5 · Seis Diretorias de Talentos ===== */
+  .diretorias__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    /* start (e não stretch): quando um bloco abre, os vizinhos da mesma linha NÃO acompanham a altura — antes ficavam
+       gigantes e vazios. Fechados continuam do mesmo tamanho porque o cabeçalho tem altura mínima de 3 linhas. */
+    align-items: start;
+  }
+
+  /* Cada caixa é toda colorida e tem a altura do próprio conteúdo. */
+  .diretoria {
+    background: var(--dir-bg);
+    color: var(--color-text);
+  }
+
+  .diretoria__head {
+    appearance: none;
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+    /* Altura mínima de duas linhas de nome no celular (1 coluna); de TRÊS linhas a partir de 720px (2–3 colunas, onde
+       "Debates e Simulações da ONU" ocupa 3): as caixas fechadas ficam do mesmo tamanho sem precisar de stretch. */
+    min-height: 6.25rem;
+    padding: 1.25rem 1.25rem;
+    border: none;
+    background: none;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .diretoria__head:hover,
+  .diretoria__head:focus-visible {
+    background: rgba(21, 42, 56, 0.08);
+  }
+
+  .diretoria :global(.diretoria__icone) {
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-text);
+  }
+
+  .diretoria__nome {
+    font-size: var(--text-h3);
+    line-height: var(--leading-h3);
+    font-weight: 600;
+  }
+
+  .diretoria__sinal {
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--color-text);
+    transition: transform 0.2s ease;
+  }
+
+  .diretoria__head[aria-expanded='true'] .diretoria__sinal {
+    transform: rotate(45deg);
+  }
+
+  .diretoria__corpo {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease;
+  }
+
+  .diretoria__corpo.is-open {
+    grid-template-rows: 1fr;
+  }
+
+  .diretoria__corpo-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .diretoria__corpo-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-inline: 1.25rem;
+  }
+
+  .diretoria__corpo.is-open .diretoria__corpo-inner {
+    padding-bottom: 1.5rem;
+  }
+
+  .diretoria__corpo-inner p {
+    color: var(--color-text);
+    max-width: none;
+  }
+
+  /* Foto da Diretoria: quadrada (recorte pelo object-position de cada uma), moldura reta de 1px. */
+  .diretoria__foto {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 1px solid var(--color-text);
+  }
+
+  .diretoria .chip {
+    background: var(--color-bg);
+    border-color: var(--color-text);
+    color: var(--color-text);
+  }
+
+  .etiquetas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 720px) {
+    .diretoria__head {
+      min-height: calc(3 * var(--leading-h3) * var(--text-h3) + 2.5rem);
+    }
+
+    .diretorias__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1000px) {
+    .diretorias__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* ===== 6 · Antes e depois ===== */
+  .comparativos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(2rem, 1.5rem + 2vw, 3rem);
+    margin-top: 0.75rem;
+  }
+
+  .comparativo__nome {
+    margin-bottom: 0.75rem;
+  }
+
+  .comparativo__caixa {
+    position: relative;
+    display: grid;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 55%, var(--color-text));
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+
+  .comparativo__camada {
+    grid-area: 1 / 1;
+    padding: 1.25rem 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  /*
+    As duas versões ocupam o mesmo espaço (grid empilhado) e o controle faz a passagem de uma
+    para a outra: --t vai de 0 (só o antes) a 1 (só o depois), com uma zona de mistura curta no
+    meio do curso — um "wipe" cortaria o texto ao meio, ilegível em frases curtas.
+  */
+  .comparativo__camada--antes {
+    opacity: calc(1 - var(--t));
+    background: color-mix(in srgb, var(--color-accent) 30%, var(--color-bg));
+  }
+
+  .comparativo__camada--depois {
+    opacity: var(--t);
+    background: var(--color-accent);
+    color: var(--color-text);
+  }
+
+  .comparativo__rotulo {
+    font-size: var(--text-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+  }
+
+  .comparativo__camada--depois .comparativo__rotulo {
+    color: var(--color-primary-dark);
+  }
+
+  .comparativo__texto {
+    font-size: var(--text-h3);
+    line-height: var(--leading-h3);
+    font-weight: 500;
+    max-width: none;
+  }
+
+  .comparativo__lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .comparativo__controle {
+    display: block;
+    margin-top: 0.75rem;
+  }
+
+  .comparativo__controle input[type='range'] {
+    width: 100%;
+    accent-color: var(--color-primary);
+    cursor: ew-resize;
+  }
+
+  .comparativo__escala {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  /* Legenda + observação do jogo numa linha só: o texto tem ≈82em, então a fonte acompanha a largura do container
+     (100vw - margens, limitada a 72rem) dividida por 86; abaixo de ~930px de tela quebra normalmente. */
+  .jogo__notas {
+    margin-top: 0.75rem;
+    max-width: none;
+    font-size: clamp(0.6875rem, calc(min(100vw - 3rem, 69.5rem) / 86), 1rem);
+  }
+
+  .jogo__notas-obs {
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  /* Legenda fixa do antes e depois: sem a linha de divisão em cima (era desnecessária). */
+  .legenda--fixa {
+    margin-top: 1.5rem;
+  }
+
+  @media (min-width: 900px) {
+    .comparativos {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: var(--grid-gap);
+    }
+  }
+
+  /* A frase inteira numa linha só: o texto tem ~78,5em de largura, então a fonte acompanha a largura do container
+     (100vw - margens, limitada ao container de 72rem) dividida por 80; abaixo de ~910px de tela quebra normalmente. */
+  .diretorias__medida {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: clamp(0.6875rem, calc(min(100vw - 3rem, 69.5rem) / 80), 1rem);
+    max-width: none;
+  }
+
+  /* ===== 7 · Como sabemos que funciona (fundo escuro) ===== */
+  .funciona {
+    color: var(--color-text);
+  }
+
+  .funciona__principal {
+    margin-top: 1.5rem;
+  }
+
+  .funciona__principal-label {
+    font-size: var(--text-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 0.75rem;
+  }
+
+  .funciona__principal-texto {
+    font-size: clamp(1.75rem, 1.2rem + 2.5vw, 3.25rem);
+    line-height: 1.12;
+    font-weight: 600;
+    max-width: 24ch;
+    color: var(--color-text);
+  }
+
+  /* Foto dos estudantes em Birigui, logo depois do indicador principal. Moldura reta de 1px. */
+  .funciona__foto {
+    margin: clamp(1.5rem, 1rem + 2vw, 2.5rem) 0 0;
+  }
+
+  .funciona__foto-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center 68%;
+    border: 1px solid var(--color-border);
+  }
+
+  .funciona__tambem {
+    margin-top: clamp(2.5rem, 2rem + 2vw, 4rem);
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .funciona__tambem-label {
+    font-size: var(--text-caption);
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .funciona__lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 1rem;
+  }
+
+  .funciona__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    /* "Autoconhecimento" em --text-h3 não cabe numa coluna de ~165px (2 colunas no mobile). */
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .funciona :global(.funciona__icone) {
+    width: 2.25rem;
+    height: 2.25rem;
+    color: var(--ic, var(--color-primary));
+  }
+
+  .funciona__metodologia {
+    margin-top: clamp(2rem, 1.5rem + 2vw, 3rem);
+  }
+
+  .funciona__metodologia-texto {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border-left: 2px solid var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+    max-width: 64rem;
+  }
+
+  .funciona__metodologia-texto[hidden] {
+    display: none;
+  }
+
+  .metodo__titulo {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-size: var(--text-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-primary);
+  }
+
+  .metodo__lista,
+  .metodo__acomp {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .metodo__item {
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .metodo__eixo {
+    font-size: var(--text-caption);
+    color: var(--color-text-secondary);
+  }
+
+  .metodo__item .metodo__nome {
+    font-size: var(--text-h3);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .metodo__item p strong {
+    color: var(--color-text);
+  }
+
+  .metodo__acomp li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+
+  .metodo__quando {
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  @media (min-width: 720px) {
+    .metodo__lista,
+    .metodo__acomp {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: var(--grid-gap);
+    }
+  }
+
+  .funciona__metodologia-texto p {
+    color: var(--color-text-secondary);
+    max-width: none;
+  }
+
+  @media (min-width: 720px) {
+    .funciona__lista {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      column-gap: var(--grid-gap);
+    }
+
+    .funciona__item {
+      /* Escala com a largura (4 colunas): "Autoconhecimento" não pode quebrar no meio da palavra. */
+      font-size: clamp(1rem, 0.6rem + 1vw, 1.625rem);
+      line-height: var(--leading-h3);
+      font-weight: 500;
+    }
+  }
+
+  /* ===== Teoria da Mudança, dentro de "Em que acreditamos" ===== */
+  /* Teoria da Mudança: última seção da página, depois da avaliação de impacto. */
+  .teoria-final__corpo {
+    padding-top: 0;
+  }
+
+</style>
+
+<script>
+  const motionAllowed = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+  // ===== 1 · Números: os três cartões sobem e contam JUNTOS =====
+  // (Antes entravam um a cada 700ms — a pedido, "as três fotos tão subindo em tempos diferentes": agora
+  // todos começam no mesmo instante, com a mesma duração. O gatilho é 15% da lista visível: com 40% a lista
+  // empilhada do celular — mais alta que a tela — podia nunca disparar e deixar os cartões invisíveis.)
+  const numeros = document.querySelector<HTMLElement>('[data-numeros]');
+  if (numeros && motionAllowed && 'IntersectionObserver' in window) {
+    const itens = Array.from(numeros.querySelectorAll<HTMLElement>('[data-numero]'));
+    numeros.classList.add('is-seq-ready');
+    itens.forEach((it) => {
+      const v = it.querySelector<HTMLElement>('[data-numero-valor]');
+      if (v) v.textContent = '0';
+    });
+
+    function runSequence() {
+      itens.forEach((it) => {
+        const v = it.querySelector<HTMLElement>('[data-numero-valor]');
+        const target = Number(v?.dataset.target ?? '0');
+        const duration = 800;
+        it.classList.add('is-on');
+        const start = performance.now();
+        function frame(now: number) {
+          const t = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - t, 3);
+          if (v) v.textContent = String(Math.round(target * eased));
+          if (t < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    const obs = new IntersectionObserver(
+      (entries, o) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            runSequence();
+            o.disconnect();
+          }
+        });
+      },
+      { threshold: 0.15 },
+    );
+    obs.observe(numeros);
+  }
+
+  // ===== 2 · Painel da base teórica (os cartões viram só por CSS, no hover/foco) =====
+
+  function bindDisclosure(toggleSel: string, panelSel: string) {
+    const toggle = document.querySelector<HTMLButtonElement>(toggleSel);
+    const panel = document.querySelector<HTMLElement>(panelSel);
+    if (!toggle || !panel) return;
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!open));
+      panel.hidden = open;
+    });
+  }
+  bindDisclosure('[data-base-toggle]', '[data-base-panel]');
+  bindDisclosure('[data-metodologia-toggle]', '[data-metodologia]');
+
+  // ===== Acordeão das Diretorias: abre/fecha com a técnica grid 0fr → 1fr =====
+  function bindAccordion(itemSel: string, toggleSel: string, bodySel: string) {
+    document.querySelectorAll<HTMLElement>(itemSel).forEach((item) => {
+      const toggle = item.querySelector<HTMLButtonElement>(toggleSel);
+      const body = item.querySelector<HTMLElement>(bodySel);
+      if (!toggle || !body) return;
+      body.setAttribute('inert', '');
+      toggle.addEventListener('click', () => {
+        const open = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!open));
+        body.classList.toggle('is-open', !open);
+        if (open) body.setAttribute('inert', '');
+        else body.removeAttribute('inert');
+      });
+    });
+  }
+  bindAccordion('[data-diretoria]', '[data-diretoria-toggle]', '.diretoria__corpo');
+
+  // ===== 3 · Avatar que acompanha o scroll =====
+  const atosRoot = document.querySelector<HTMLElement>('[data-atos]');
+  if (atosRoot) {
+    const fill = atosRoot.querySelector<HTMLElement>('[data-atos-fill]');
+    const avatar = atosRoot.querySelector<HTMLElement>('[data-atos-avatar]');
+    const paradas = Array.from(atosRoot.querySelectorAll<HTMLElement>('[data-atos-parada]'));
+    const START = 100 / 6;
+    const SPAN = (100 * 4) / 6;
+
+    function render(p: number) {
+      if (avatar) avatar.style.left = `${START + p * SPAN}%`;
+      if (fill) fill.style.width = `${p * 100}%`;
+      paradas.forEach((el, i) => el.classList.toggle('is-reached', p >= i / (paradas.length - 1) - 0.001));
+    }
+
+    if (!motionAllowed) {
+      // Sem movimento: o avatar fica parado no primeiro ato, sem depender de scroll.
+      render(0);
+    } else {
+      function onScroll() {
+        const rect = atosRoot!.getBoundingClientRect();
+        const vh = window.innerHeight;
+        // 0 quando o bloco entra pela base da tela; 1 quando o topo dele chega perto do meio da tela
+        // (o avatar termina a caminhada com a trilha ainda inteira à vista).
+        const p = clamp((vh * 0.9 - rect.top) / (vh * 0.9 - vh * 0.45 + 0.0001), 0, 1);
+        render(p);
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll);
+      onScroll();
+    }
+  }
+
+  // ===== 4 · Mock do jogo da vida =====
+  const jogoRoot = document.querySelector<HTMLElement>('[data-jogo]');
+  const jogoDataEl = document.querySelector<HTMLScriptElement>('[data-jogo-data]');
+  if (jogoRoot && jogoDataEl) {
+    const data = JSON.parse(jogoDataEl.textContent ?? '{}') as {
+      rodadas: { id: string; escolha: string; resultado: string; proxima: string; rodada2: { escolha: string; resultado: string }[] }[];
+      inicio: string;
+      nodes: Record<string, { x: number; y: number }>;
+    };
+    const fala = jogoRoot.querySelector<HTMLElement>('[data-fala]')!;
+    const escolhas = jogoRoot.querySelector<HTMLElement>('[data-escolhas]')!;
+    const avatar = jogoRoot.querySelector<HTMLElement>('[data-avatar]')!;
+    const reiniciar = jogoRoot.querySelector<HTMLButtonElement>('[data-reiniciar]')!;
+    const nodeEls = Array.from(jogoRoot.querySelectorAll<HTMLElement>('[data-node]'));
+    const edgeEls = Array.from(jogoRoot.querySelectorAll<SVGLineElement>('[data-edge]'));
+
+    function moveAvatar(id: string) {
+      const pos = data.nodes[id];
+      avatar.style.left = `${pos.x}%`;
+      avatar.style.top = `${pos.y}%`;
+    }
+
+    function mark(path: string[]) {
+      nodeEls.forEach((n) => {
+        const id = n.dataset.node!;
+        n.classList.toggle('is-traveled', path.includes(id));
+        // Os ramos não escolhidos ficam esmaecidos: "escolher abre uns caminhos e fecha outros".
+        const branch = path[1];
+        n.classList.toggle('is-dim', path.length > 1 && id !== 'start' && !id.startsWith(branch));
+      });
+      edgeEls.forEach((e) => {
+        const [from, to] = e.dataset.edge!.split('>');
+        const i = path.indexOf(to);
+        e.classList.toggle('is-traveled', i > 0 && path[i - 1] === from);
+      });
+    }
+
+    function setButtons(labels: { label: string; handler: () => void }[]) {
+      escolhas.innerHTML = '';
+      labels.forEach(({ label, handler }) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'jogo__escolha';
+        b.textContent = label;
+        b.addEventListener('click', handler);
+        escolhas.appendChild(b);
+      });
+    }
+
+    function reset() {
+      moveAvatar('start');
+      mark(['start']);
+      nodeEls.forEach((n) => n.classList.remove('is-dim'));
+      fala.textContent = data.inicio;
+      reiniciar.hidden = true;
+      setButtons(data.rodadas.map((r) => ({ label: r.escolha, handler: () => choose1(r.id) })));
+    }
+
+    function choose1(id: string) {
+      const r = data.rodadas.find((x) => x.id === id)!;
+      moveAvatar(id);
+      mark(['start', id]);
+      fala.textContent = `${r.resultado} ${r.proxima}`;
+      setButtons(r.rodada2.map((c, i) => ({ label: c.escolha, handler: () => choose2(id, i) })));
+    }
+
+    function choose2(id: string, i: number) {
+      const r = data.rodadas.find((x) => x.id === id)!;
+      const end = `${id}-${i}`;
+      moveAvatar(end);
+      mark(['start', id, end]);
+      fala.textContent = r.rodada2[i].resultado;
+      escolhas.innerHTML = '';
+      reiniciar.hidden = false;
+      reiniciar.focus();
+    }
+
+    // Os botões iniciais já vêm renderizados no servidor — religa com os mesmos handlers.
+    escolhas.querySelectorAll<HTMLButtonElement>('[data-opcao]').forEach((b) => {
+      b.addEventListener('click', () => choose1(b.dataset.opcao!));
+    });
+    reiniciar.addEventListener('click', reset);
+  }
+
+  // ===== 6 · Todos os quadros do antes/depois com a mesma altura (a do maior) =====
+  function equalizeCaixas() {
+    const caixas = Array.from(document.querySelectorAll<HTMLElement>('.comparativo__caixa'));
+    caixas.forEach((c) => (c.style.minHeight = ''));
+    const max = Math.max(0, ...caixas.map((c) => c.getBoundingClientRect().height));
+    if (max > 0) caixas.forEach((c) => (c.style.minHeight = `${Math.ceil(max)}px`));
+  }
+  equalizeCaixas();
+  window.addEventListener('resize', equalizeCaixas);
+  if (document.fonts?.ready) document.fonts.ready.then(equalizeCaixas);
+
+  // ===== 6 · Controle deslizante antes/depois =====
+  document.querySelectorAll<HTMLElement>('[data-comparativo]').forEach((root) => {
+    const slider = root.querySelector<HTMLInputElement>('[data-slider]');
+    const caixa = root.querySelector<HTMLElement>('.comparativo__caixa');
+    if (!slider || !caixa) return;
+    function update() {
+      const v = Number(slider!.value);
+      const t = clamp((v - 42) / 16, 0, 1);
+      caixa!.style.setProperty('--t', String(t));
+      const isEn = document.documentElement.lang.startsWith('en');
+      slider!.setAttribute('aria-valuetext', t === 0 ? (isEn ? 'Before' : 'Antes') : t === 1 ? (isEn ? 'After' : 'Depois') : isEn ? 'Between before and after' : 'Entre o antes e o depois');
+    }
+    slider.addEventListener('input', update);
+    update();
+  });
+</script>

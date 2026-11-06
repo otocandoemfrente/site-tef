@@ -1,0 +1,286 @@
+---
+import { Image } from 'astro:assets';
+import logoAzul from '../assets/images/logo-tocando-azul.png';
+import { navItems, uiStrings, getLocaleSwitchHref, type Locale } from '../i18n/nav';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const strings = uiStrings[locale];
+const currentPath = Astro.url.pathname;
+const localeSwitchHref = getLocaleSwitchHref(locale, currentPath);
+// Sinaliza quando o seletor está caindo de volta para a Home em vez de traduzir a página atual.
+const isEnFallback = locale === 'pt' && localeSwitchHref === '/en/' && currentPath !== '/';
+---
+
+<header class="site-header" id="site-header">
+  <div class="container site-header__inner">
+    <a href={locale === 'pt' ? '/' : '/en/'} class="wordmark" aria-label={locale === 'pt' ? 'Tocando Em Frente — página inicial' : 'Tocando Em Frente — home page'}>
+      <Image src={logoAzul} alt="Tocando Em Frente" class="wordmark__logo" format="png" />
+    </a>
+
+    <button
+      type="button"
+      class="nav-toggle"
+      aria-expanded="false"
+      aria-controls="primary-nav-group"
+      id="nav-toggle"
+    >
+      <span class="visually-hidden">{locale === 'pt' ? 'Abrir menu' : 'Open menu'}</span>
+      <span class="nav-toggle__bars" aria-hidden="true"></span>
+    </button>
+
+    {/*
+      Rótulos das páginas centralizados: no desktop, "primary-nav-group" vira
+      display:contents (some do layout, mas seus dois filhos — nav e ações —
+      passam a ser colunas irmãs de verdade no grid de 3 colunas do cabeçalho,
+      logo | nav centralizado | ações). No mobile, o mesmo grupo vira o painel
+      único que abre/fecha com o botão de menu.
+    */}
+    <div id="primary-nav-group" class="primary-nav-group">
+      <nav class="primary-nav" aria-label={locale === 'pt' ? 'Menu principal' : 'Main menu'}>
+        <ul>
+          {
+            navItems.map((item) => {
+              const href = locale === 'pt' ? item.hrefPt : item.hrefEn;
+              const label = locale === 'pt' ? item.labelPt : item.labelEn;
+              if (!href) {
+                // Ainda não existe versão em inglês desta página — cai de volta para o PT.
+                return (
+                  <li>
+                    <a href={item.hrefPt} title={strings.navItemFallbackTitle}>
+                      {label}
+                    </a>
+                  </li>
+                );
+              }
+              // Compara ignorando a âncora (#contato) — "Contato" aponta pra dentro de Faça Parte,
+              // não pra uma página própria, mas ainda precisa marcar como página atual.
+              const hrefPath = href.split('#')[0];
+              const isCurrent = hrefPath === currentPath || hrefPath === currentPath.replace(/\/$/, '') || hrefPath.replace(/\/$/, '') === currentPath.replace(/\/$/, '');
+              return (
+                <li>
+                  <a href={href} aria-current={isCurrent ? 'page' : undefined}>
+                    {label}
+                  </a>
+                </li>
+              );
+            })
+          }
+        </ul>
+      </nav>
+
+      <div class="primary-nav__actions">
+        <a
+          href={localeSwitchHref}
+          class="locale-switch"
+          title={isEnFallback ? strings.localeSwitchFallbackTitle : undefined}
+        >
+          <span aria-hidden="true">PT | EN</span>
+          <span class="visually-hidden">
+            {strings.languageLabel}: {locale === 'pt' ? 'mudar para inglês' : 'switch to Portuguese'}
+          </span>
+        </a>
+        <a href={strings.donateHref} class="btn btn-dark">{strings.donate}</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: var(--header-height);
+  }
+
+  .wordmark {
+    display: flex;
+    align-items: center;
+  }
+
+  .wordmark :global(.wordmark__logo) {
+    height: 2.75rem;
+    width: auto;
+    transition: opacity 0.15s ease;
+  }
+
+  .wordmark:hover :global(.wordmark__logo) {
+    opacity: 0.8;
+  }
+
+  .nav-toggle {
+    display: none;
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-toggle__bars,
+  .nav-toggle__bars::before,
+  .nav-toggle__bars::after {
+    display: block;
+    width: 1.25rem;
+    height: 2px;
+    background: var(--color-text);
+    position: relative;
+  }
+
+  .nav-toggle__bars::before,
+  .nav-toggle__bars::after {
+    content: '';
+    position: absolute;
+    left: 0;
+  }
+
+  .nav-toggle__bars::before {
+    top: -6px;
+  }
+
+  .nav-toggle__bars::after {
+    top: 6px;
+  }
+
+  .primary-nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    gap: 1.75rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .primary-nav ul a {
+    color: var(--color-text);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: var(--text-button);
+    transition: color 0.15s ease;
+  }
+
+  .primary-nav ul a:hover {
+    color: var(--color-primary);
+  }
+
+  .primary-nav ul a[aria-current='page'] {
+    color: var(--color-primary);
+  }
+
+  .primary-nav__actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .locale-switch {
+    font-weight: 500;
+    font-size: var(--text-caption);
+    letter-spacing: var(--tracking-button);
+    color: var(--color-text);
+    text-decoration: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.65rem;
+  }
+
+  .locale-switch:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  /* Desktop: o grupo "some" do layout — nav e ações viram colunas irmãs de verdade do grid abaixo. */
+  @media (min-width: 861px) {
+    .site-header__inner {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+    }
+
+    .primary-nav-group {
+      display: contents;
+    }
+  }
+
+  /* Mobile: o mesmo grupo vira um único painel suspenso, aberto/fechado pelo botão de menu. */
+  @media (max-width: 860px) {
+    .nav-toggle {
+      display: inline-flex;
+    }
+
+    .primary-nav-group {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+      position: absolute;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      padding: 1rem 1.25rem 1.5rem;
+    }
+
+    .site-header.is-nav-open .primary-nav-group {
+      display: flex;
+    }
+
+    .primary-nav ul {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    .primary-nav ul li a {
+      display: block;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .primary-nav__actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+
+    .primary-nav__actions .btn,
+    .primary-nav__actions .locale-switch {
+      text-align: center;
+    }
+  }
+</style>
+
+<script>
+  const header = document.getElementById('site-header');
+  const toggle = document.getElementById('nav-toggle');
+
+  if (header && toggle) {
+    toggle.addEventListener('click', () => {
+      const isOpen = header.classList.toggle('is-nav-open');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    header.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        header.classList.remove('is-nav-open');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.focus();
+      }
+    });
+  }
+</script>

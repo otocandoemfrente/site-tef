@@ -1,0 +1,1301 @@
+---
+/*
+  Teoria da Mudança em "roleta", versão MEIO CÍRCULO (cúpula): só a metade de cima da roda aparece, bem grande; a
+  linha do diâmetro é a base do quadro. A roda tem 4 arcos com passo de 45° (cada um com ~39°), então os 4 cabem
+  dentro da cúpula (180°) no estado final; durante a sequência a roda gira por baixo da base e a etapa ativa para
+  no centro do arco (0° = topo).
+
+  Camadas (de baixo pra cima, todas dentro de `.tm__frame`):
+    1. SVG recortado na linha da base: anel cinza ("trilho") e o grupo `.tm__wheel` (o único que GIRA) com os arcos
+       coloridos (traço de pincel via filtro), as setas de fluxo e as áreas de clique.
+    2. Selo azul-marinho FIXO (meio disco colado na base, nunca gira).
+    3. Camada FIXA de rótulos (HTML): nome+ícone da etapa e as bolinhas dos tópicos — nada disso fica dentro do grupo que
+       gira, então texto e ícone nunca viram de cabeça pra baixo.
+  Tópicos: sempre num "leque" em volta do topo da cúpula (durante a sequência e também ao passar o cursor num arco no
+  estado final). Nome+ícone da etapa: `seq` (a etapa ativa, no topo da cúpula) ou `final` (um por arco, dentro do anel).
+*/
+import Icon from './Icon.astro';
+import { localeFromUrl } from '../i18n/locale';
+import type { IconName } from './Icon.astro';
+
+interface Item {
+  id: string;
+  titulo: string;
+  /** Rótulo curto (1-2 linhas) mostrado em volta do círculo — `titulo` é o nome completo (aria-label e painel). */
+  rotulo: string;
+  texto: string;
+}
+
+interface Categoria {
+  id: string;
+  nome: string;
+  icone: IconName;
+  tituloCompleto?: string;
+  termoOriginal?: string;
+  resumo: string;
+  itens: Item[];
+}
+
+interface Props {
+  kicker?: string;
+  /** Instrução do estado de repouso ("Passe o cursor...") — mostrada no próprio painel de explicação. */
+  lede?: string;
+  centro: { titulo: string; texto: string };
+  categorias: Categoria[];
+  /** Não usado: o botão "Explorar Teoria da Mudança" (link pro Kumu) foi removido a pedido. */
+  kumu?: { texto: string; cta: string; link: string };
+}
+
+const { kicker, lede, centro, categorias } = Astro.props;
+const en = localeFromUrl(Astro.url) === 'en';
+
+// Cúpula: o centro da roda fica na base do quadro (viewBox 1000 × 560).
+const W = 1000;
+const H = 560;
+const cxy = { x: 500, y: 548 };
+const bandR = 385; // raio do traço dos arcos (e do trilho)
+const itemR = 442; // raio das bolinhas dos tópicos (fora do anel)
+const catLabelR = 285; // raio do nome+ícone da etapa (dentro do anel)
+const PITCH = 45; // graus entre os centros dos arcos
+const HALF = PITCH / 2; // meia abertura: os 4 arcos se encostam (45° cada), sem vão, e fecham a cúpula inteira
+const FINAL_ROT = -67.5; // rotação da roda no estado final: arcos centrados em -67,5° / -22,5° / 22,5° / 67,5°
+
+function polar(r: number, deg: number) {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: cxy.x + r * Math.cos(rad), y: cxy.y + r * Math.sin(rad) };
+}
+const px = (v: number) => Math.round((v / W) * 10000) / 100;
+const py = (v: number) => Math.round((v / H) * 10000) / 100;
+const r1 = (v: number) => Math.round(v * 100) / 100;
+
+/** Lado do rótulo em relação à bolinha, pelo ângulo (0° = topo): em cima, à direita, embaixo ou à esquerda. */
+function side(a: number): 'top' | 'right' | 'bottom' | 'left' {
+  const d = ((((a % 360) + 360) % 360) + 180) % 360 - 180; // -180..180
+  if (Math.abs(d) <= 38) return 'top';
+  if (Math.abs(d) >= 142) return 'bottom';
+  return d > 0 ? 'right' : 'left';
+}
+
+// Anel inteiro da cúpula (180°, esquerda → direita) e o meio disco interno que recebe a cor da etapa.
+const fl = polar(bandR, -90);
+const fr = polar(bandR, 90);
+// A cor entra pela DIREITA e corre pra ESQUERDA (a pedido): o traço começa em fr e termina em fl.
+const fullPath = `M ${r1(fr.x)} ${r1(fr.y)} A ${bandR} ${bandR} 0 0 0 ${r1(fl.x)} ${r1(fl.y)}`;
+const fiR = bandR - 16;
+const fi0 = polar(fiR, -90);
+const fi1 = polar(fiR, 90);
+const fillPath = `M ${r1(fi0.x)} ${r1(fi0.y)} A ${fiR} ${fiR} 0 0 1 ${r1(fi1.x)} ${r1(fi1.y)} Z`;
+
+const stages = categorias.map((cat, k) => {
+  const mid = k * PITCH; // posição do arco na roda (a roda gira; a posição visível = mid + rotação)
+  const p0 = polar(bandR, mid - HALF);
+  const p1 = polar(bandR, mid + HALF);
+  const arcPath = `M ${r1(p1.x)} ${r1(p1.y)} A ${bandR} ${bandR} 0 0 0 ${r1(p0.x)} ${r1(p0.y)}`; // desenhado da direita pra esquerda
+
+  const n = cat.itens.length;
+  const spread = n >= 4 ? 116 : 76; // abertura angular (graus) do leque de tópicos
+  const items = cat.itens.map((it, j) => {
+    const th = spread * ((j + 0.5) / n - 0.5);
+    const pt = polar(itemR, th);
+    return { ...it, x: px(pt.x), y: py(pt.y), pos: side(th) };
+  });
+
+  // nome+ícone: no topo (etapa ativa durante a sequência) ou dentro do anel, no centro do arco (estado final)
+  const ls = polar(catLabelR, 0);
+  const lf = polar(catLabelR, FINAL_ROT + mid);
+
+  return {
+    ...cat,
+    k,
+    arcPath,
+    items,
+    seq: { x: px(ls.x), y: py(ls.y) },
+    fin: { x: px(lf.x), y: py(lf.y) },
+  };
+});
+
+const dataMap = JSON.stringify(
+  Object.fromEntries(
+    stages.map((s) => [
+      s.id,
+      {
+        nome: s.nome,
+        resumo: s.resumo,
+        tituloCompleto: s.tituloCompleto ?? null,
+        termoOriginal: s.termoOriginal ?? null,
+        itens: Object.fromEntries(s.itens.map((it) => [it.id, { titulo: it.titulo, texto: it.texto }])),
+      },
+    ])
+  )
+);
+---
+
+<div class="tm" data-tm-root data-state="final" data-map={dataMap}>
+  <div class="tm__layout">
+    <div class="tm__head">
+      {kicker && <h2 class="tm__titulo">{kicker}</h2>}
+    </div>
+
+    <!--
+      Painel de explicação: um ÚNICO bloco com dois estados que se substituem (nunca coexistem) — a instrução
+      ("Passe o cursor...") em repouso, ou a explicação do tópico/etapa em foco. A troca tem fade suave.
+    -->
+    <div class="tm__panel is-idle" data-tm-panel data-tm-default-text={lede} aria-live="polite">
+      <div class="tm__panel-inner" data-tm-panel-inner>
+        <p class="tm__panel-kicker" data-tm-panel-kicker aria-hidden="true"></p>
+        <h3 data-tm-panel-title></h3>
+        <p data-tm-panel-text>{lede}</p>
+      </div>
+    </div>
+
+    <div class="tm__stage">
+      <div class="tm__frame" data-tm-frame>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" aria-hidden="true">
+          <defs>
+            <!-- Só a metade de cima da roda aparece: recorte na linha da base. -->
+            <clipPath id="tm-dome">
+              <rect x="0" y="0" width={W} height={cxy.y + 2} />
+            </clipPath>
+          </defs>
+
+          <g clip-path="url(#tm-dome)" data-tm-dome>
+            <!-- Meio disco interno: recebe a cor da etapa em foco (bem suave). -->
+            <g data-tm-fills>
+              {stages.map((s) => (
+                <path class="tm__fill" data-tm-fill={s.k} d={fillPath} style={`--cat-color: var(--tm-${s.id})`} />
+              ))}
+            </g>
+
+            <circle class="tm__track" cx={cxy.x} cy={cxy.y} r={bandR} />
+
+            <!-- Estado final: os 4 arcos de 45°, encostados, formando a cúpula inteira em 4 cores. -->
+            <g class="tm__wheel" data-tm-arcs style={`transform: rotate(${FINAL_ROT}deg)`}>
+              {stages.map((s) => (
+                <path
+                  class="tm__arc"
+                  data-tm-arc={s.k}
+                  d={s.arcPath}
+                  pathLength="1"
+                  style={`--cat-color: var(--tm-${s.id}); --pd: ${(stages.length - 1 - s.k) * 200}ms`}
+                />
+              ))}
+            </g>
+
+            <!-- Durante a sequência: o anel INTEIRO assume a cor da etapa (pintado da esquerda pra direita). -->
+            <g data-tm-fulls>
+              {stages.map((s) => (
+                <path class="tm__full" data-tm-full={s.k} d={fullPath} pathLength="1" style={`--cat-color: var(--tm-${s.id})`} />
+              ))}
+            </g>
+
+            <g class="tm__wheel" data-tm-hits style={`transform: rotate(${FINAL_ROT}deg)`}>
+              {stages.map((s) => (
+                <path class="tm__hit" data-tm-hit={s.k} d={s.arcPath} />
+              ))}
+            </g>
+          </g>
+        </svg>
+
+        <button type="button" class="tm__center" data-tm-center aria-label={en ? 'Clear selection and return to the overview' : 'Limpar seleção e voltar à visão geral'}>
+          <span class="tm__center-title">{centro.titulo}</span>
+        </button>
+
+        {stages.map((s) => (
+          <button
+            type="button"
+            class="tm__cat-label"
+            data-tm-cat={s.id}
+            data-stage={s.k}
+            data-sx={s.seq.x}
+            data-sy={s.seq.y}
+            data-fx={s.fin.x}
+            data-fy={s.fin.y}
+            style={`left:${s.fin.x}%; top:${s.fin.y}%; --cat-color: var(--tm-${s.id})`}
+            aria-label={`${s.nome}: ${s.resumo}`}
+          >
+            <span class="tm__cat-icon-wrap">
+              <Icon name={s.icone} class="tm__cat-icon" />
+            </span>
+            <span class="tm__cat-name">{s.nome}</span>
+          </button>
+        ))}
+
+        {stages.flatMap((s) =>
+          s.items.map((it, j) => (
+            <button
+              type="button"
+              class="tm__item"
+              data-tm-item={it.id}
+              data-tm-cat={s.id}
+              data-stage={s.k}
+              data-pos={it.pos}
+              aria-label={it.titulo}
+              style={`left:${it.x}%; top:${it.y}%; --cat-color: var(--tm-${s.id}); --d:${j * 320}ms`}
+            >
+              <span class="tm__item-body">
+                <span class="tm__item-dot" aria-hidden="true"></span>
+                <span class="tm__item-label" aria-hidden="true">{it.rotulo}</span>
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+
+      <div class="tm__controls" role="group" aria-label={en ? 'Theory of Change stages' : 'Etapas da Teoria da Mudança'}>
+        {stages.map((s) => (
+          <button type="button" class="tm__pill" data-tm-pill={s.k} style={`--cat-color: var(--tm-${s.id})`}>
+            {s.nome}
+          </button>
+        ))}
+      </div>
+
+      <div class="tm__tools">
+        <button type="button" class="tm__tool" data-tm-replay hidden>{en ? 'Replay' : 'Ver de novo'}</button>
+      </div>
+
+      <!-- Celular/tablet: os tópicos da etapa em foco numa lista logo abaixo do círculo (os rótulos em volta somem). -->
+      <div class="tm__list" data-tm-list>
+        <p class="tm__list-hint" data-tm-list-hint>{en ? 'Tap an arc of the circle to see that stage’s topics.' : 'Toque num arco do círculo para ver os tópicos daquela etapa.'}</p>
+        {stages.map((s) => (
+          <ul class="tm__list-ul" data-tm-list-ul={s.k} hidden style={`--cat-color: var(--tm-${s.id})`}>
+            {s.items.map((it) => (
+              <li>
+                <button type="button" class="tm__list-btn" data-tm-item={it.id} data-tm-cat={s.id}>
+                  {it.titulo}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ))}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .tm {
+    /* Cores exatas pedidas (vermelho, roxo, verde, amarelo) — usadas como preenchimento, nunca como cor de texto. */
+    --tm-desafios: #ed4949;
+    --tm-curriculo: #b274f1;
+    --tm-mudancas: #b8d58a;
+    --tm-impacto: #ffbd28;
+  }
+
+  /* ===== layout: texto à esquerda, círculo à direita (desktop); círculo primeiro, texto abaixo (celular) ===== */
+  .tm__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'stage' 'panel';
+    gap: 1.5rem;
+  }
+
+  .tm__head {
+    grid-area: head;
+  }
+
+  .tm__stage {
+    grid-area: stage;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    min-width: 0;
+  }
+
+  .tm__panel {
+    grid-area: panel;
+    min-height: 11rem;
+  }
+
+  @media (min-width: 1000px) {
+    .tm__layout {
+      grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+      grid-template-areas: 'head stage' 'panel stage';
+      grid-template-rows: auto 1fr;
+      column-gap: 2rem;
+      row-gap: 1.25rem;
+      align-items: start;
+    }
+
+    /* Folga lateral pros rótulos que saem do quadro (Intervenção à direita, Impacto à esquerda). */
+    .tm__stage {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  /* Título da seção "Teoria da Mudança": mesmo tamanho/peso de "Como sabemos que funciona" e "Em que acreditamos"
+     (42,88px / 700 / entrelinha 1,12 / -0,03em na Jornada), em vez do rótulo pequeno em caixa-alta. */
+  .tm__titulo {
+    margin: 0;
+    font-size: clamp(1.875rem, 1.4rem + 2vw, 3rem);
+    line-height: 1.12;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-text);
+  }
+
+  /* ===== painel de explicação ===== */
+  .tm__panel-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    transition: opacity 0.18s ease;
+  }
+
+  .tm__panel-inner.is-swapping {
+    opacity: 0;
+  }
+
+  .tm__panel-kicker:empty,
+  .tm__panel h3:empty {
+    display: none;
+  }
+
+  .tm__panel-kicker {
+    font-size: var(--text-caption);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary);
+  }
+
+  .tm__panel h3 {
+    font-size: var(--text-h3);
+  }
+
+  .tm__panel p[data-tm-panel-text] {
+    color: var(--color-text-secondary);
+    max-width: none;
+  }
+
+  /* Em repouso o texto é a instrução: ganha presença de título, não de legenda. */
+  .tm__panel.is-idle p[data-tm-panel-text] {
+    font-size: var(--text-h3);
+    font-weight: 500;
+    line-height: var(--leading-h3);
+    color: var(--color-text);
+    max-width: 30rem;
+  }
+
+  /* ===== o círculo ===== */
+  /* Cúpula: proporção 1000 × 560 (só a metade de cima da roda + folga pros rótulos do leque). */
+  .tm__frame {
+    position: relative;
+    width: min(100%, 56rem);
+    aspect-ratio: 1000 / 560;
+  }
+
+  .tm__frame svg {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+
+  .tm__track {
+    fill: none;
+    stroke: color-mix(in srgb, var(--color-border) 55%, var(--color-bg));
+    stroke-width: 28;
+  }
+
+  .tm__wheel {
+    transform-box: view-box;
+    transform-origin: 50% 97.86%; /* 548 / 560 */
+  }
+
+  .tm__arc,
+  .tm__full {
+    fill: none;
+    stroke: var(--cat-color);
+    stroke-width: 28;
+    stroke-linecap: butt; /* arcos sólidos que se encostam: sem pontas arredondadas invadindo o vizinho */
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 1;
+    visibility: hidden;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+  }
+
+  .tm__arc.is-painting,
+  .tm__full.is-painting {
+    visibility: visible;
+  }
+
+  .tm__arc.is-drawn,
+  .tm__full.is-drawn {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s ease-in-out, opacity 0.5s ease;
+  }
+
+  /* Arcos de etapas anteriores continuam visíveis, mais discretos (35%). */
+  .tm__arc.is-dim {
+    opacity: 0.35;
+  }
+
+  /* Meio disco interno: a cor da etapa em foco, bem suave (a cor "vira" por inteiro, não só o trecho dos tópicos). */
+  /* Os 4 arcos finais também se pintam da direita pra esquerda: o da direita (Impacto) primeiro, com atraso escalonado. */
+  .tm__arc.is-drawn {
+    transition: stroke-dashoffset 0.45s ease-in-out var(--pd, 0ms), opacity 0.5s ease;
+  }
+
+  .tm__fill {
+    fill: var(--cat-color);
+    opacity: 0;
+    transition: opacity 0.7s ease;
+  }
+
+  .tm__fill.is-on {
+    opacity: 0.16;
+  }
+
+  .tm__arc.is-hover {
+    stroke-width: 36;
+  }
+
+  .tm__hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 64;
+    pointer-events: none;
+  }
+
+  .tm[data-state='final'] .tm__hit {
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+
+  /* ===== selo central (fixo) ===== */
+  /* Selo fixo: meio disco colado na base da cúpula (nunca gira). */
+  .tm__center {
+    position: absolute;
+    left: 50%;
+    top: calc(548 / 560 * 100%);
+    width: calc(280 / 1000 * 100%);
+    aspect-ratio: 2 / 1;
+    transform: translate(-50%, -100%);
+    border-radius: 999px 999px 0 0;
+    background: var(--color-primary-dark);
+    border: none;
+    color: var(--color-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0.5rem 0.5rem 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .tm__center-title {
+    font-size: var(--text-caption);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1.25;
+    max-width: 9ch; /* "TEORIA DA / MUDANÇA" em duas linhas, dentro da curva do meio disco */
+    margin-top: 0.4rem;
+  }
+
+  /* ===== nome + ícone da etapa (camada fixa) ===== */
+  .tm__cat-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+  }
+
+  .tm__cat-label.is-shown {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.4s ease;
+  }
+
+  .tm__cat-icon-wrap {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    background: var(--cat-color);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+  }
+
+  .tm__cat-label:hover .tm__cat-icon-wrap,
+  .tm__cat-label:focus-visible .tm__cat-icon-wrap,
+  .tm__cat-label.is-active .tm__cat-icon-wrap {
+    transform: scale(1.1);
+  }
+
+  .tm__cat-label :global(.tm__cat-icon) {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .tm__cat-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  /* ===== bolinhas dos tópicos (camada fixa) ===== */
+  .tm__item {
+    position: absolute;
+    width: 1.75rem;
+    height: 1.75rem;
+    transform: translate(-50%, -50%);
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 3;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  }
+
+  .tm__item.is-shown {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.4s ease var(--d, 0ms);
+  }
+
+  /* Entrada: leve deslocamento (reto, em um eixo só) junto com o fade. */
+  .tm__item-body {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(8px);
+    transition: transform 0.4s ease var(--d, 0ms);
+  }
+
+  .tm__item.is-shown .tm__item-body {
+    transform: none;
+  }
+
+  .tm__item-dot {
+    flex: none;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 2px solid var(--cat-color);
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  /* Bolinha ativa: preenche na cor da etapa e cresce um pouco. */
+  .tm__item:hover .tm__item-dot,
+  .tm__item:focus-visible .tm__item-dot,
+  .tm__item.is-active .tm__item-dot {
+    background: var(--cat-color);
+    transform: scale(1.35);
+  }
+
+  .tm__item-label {
+    position: absolute;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    color: var(--color-text-secondary);
+    white-space: pre-line;
+    width: max-content;
+    max-width: 9rem;
+    transition: color 0.2s ease;
+  }
+
+  .tm__item:hover .tm__item-label,
+  .tm__item:focus-visible .tm__item-label,
+  .tm__item.is-active .tm__item-label {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .tm__item[data-pos='top'] .tm__item-label {
+    bottom: calc(100% - 0.3rem);
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+
+  .tm__item[data-pos='bottom'] .tm__item-label {
+    top: calc(100% - 0.3rem);
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+
+  .tm__item[data-pos='right'] .tm__item-label {
+    left: calc(100% - 0.3rem);
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: left;
+  }
+
+  .tm__item[data-pos='left'] .tm__item-label {
+    right: calc(100% - 0.3rem);
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: right;
+  }
+
+  /* ===== controles: pílulas das etapas, pausar/reproduzir, ver de novo ===== */
+  .tm__controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .tm__pill {
+    appearance: none;
+    padding: 0.4rem 0.85rem;
+    border: 2px solid var(--cat-color);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+  }
+
+  .tm__pill:hover,
+  .tm__pill:focus-visible {
+    background: color-mix(in srgb, var(--cat-color) 35%, var(--color-bg));
+  }
+
+  .tm__pill.is-active {
+    background: var(--cat-color);
+  }
+
+  .tm__tools {
+    display: flex;
+    gap: 1.25rem;
+    min-height: 1.75rem;
+  }
+
+  .tm__tool {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--color-text-secondary);
+    padding: 0.1rem 0;
+    font: inherit;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+  }
+
+  .tm__tool:hover,
+  .tm__tool:focus-visible {
+    color: var(--color-text);
+    border-color: var(--color-text);
+  }
+
+  .tm__tool[hidden] {
+    display: none;
+  }
+
+  /* ===== lista de tópicos (celular/tablet) ===== */
+  .tm__list {
+    display: none;
+    width: 100%;
+  }
+
+  .tm__list-hint {
+    font-size: var(--text-caption);
+    color: var(--color-text-secondary);
+    text-align: center;
+    max-width: none;
+  }
+
+  .tm__list-ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tm__list-ul[hidden] {
+    display: none;
+  }
+
+  .tm__list-btn {
+    appearance: none;
+    width: 100%;
+    text-align: left;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-left: 6px solid var(--cat-color);
+    background: var(--color-bg);
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .tm__list-btn.is-active {
+    background: color-mix(in srgb, var(--cat-color) 25%, var(--color-bg));
+  }
+
+  @media (max-width: 999px) {
+    .tm__list {
+      display: block;
+    }
+
+    .tm__item,
+    .tm__item.is-shown {
+      display: none;
+    }
+
+    /* Sem rótulos em volta, a margem vazia do quadro só desperdiça largura: o quadro fica ~15% maior que a
+       coluna (o excesso é só transparência, cortado pelo stage) e a cúpula ocupa quase toda a largura da tela. */
+    .tm__stage {
+      overflow-x: clip;
+    }
+
+    .tm__frame {
+      width: min(115%, 42rem);
+      flex: none;
+      /* a folga de cima (reservada pros rótulos do leque, escondidos aqui) também sobra */
+      margin-top: -1.5rem;
+    }
+
+    .tm__cat-name {
+      font-size: 0.6875rem;
+    }
+
+    .tm__cat-icon-wrap {
+      width: 2rem;
+      height: 2rem;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .tm__cat-name {
+      display: none;
+    }
+
+    .tm__center-title {
+      font-size: 0.75rem;
+    }
+  }
+
+  /* ===== movimento reduzido: nada gira nem se desenha; só aparece/desaparece com fade ===== */
+  @media (prefers-reduced-motion: reduce) {
+    .tm__arc,
+    .tm__full,
+    .tm__arc.is-drawn,
+    .tm__full.is-drawn {
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .tm__arc:not(.is-painting),
+    .tm__full:not(.is-painting) {
+      opacity: 0;
+    }
+
+    .tm__item-body {
+      transform: none;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  interface ItemData {
+    titulo: string;
+    texto: string;
+  }
+  interface CatData {
+    nome: string;
+    resumo: string;
+    tituloCompleto: string | null;
+    termoOriginal: string | null;
+    itens: Record<string, ItemData>;
+  }
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Tempos da sequência (ms) — `data-tm-speed` no elemento raiz acelera/atrasa tudo (útil pra testar).
+  const T = { paint: 1000, stagger: 320, hold: 4000, out: 350, resume: 2000 };
+  const STAGES = 4;
+  const PITCH = 45; // graus entre arcos: a etapa k fica no topo com a roda em -45°·k
+  const FINAL_ROT = -67.5; // estado final: os 4 arcos juntos dentro da cúpula
+
+  document.querySelectorAll<HTMLElement>('[data-tm-root]').forEach((root) => {
+    const map: Record<string, CatData> = JSON.parse(root.dataset.map ?? '{}');
+    const speed = Number(root.dataset.tmSpeed ?? '1') || 1;
+
+    const panel = root.querySelector<HTMLElement>('[data-tm-panel]')!;
+    const panelInner = root.querySelector<HTMLElement>('[data-tm-panel-inner]')!;
+    const panelKicker = root.querySelector<HTMLElement>('[data-tm-panel-kicker]')!;
+    const panelTitle = root.querySelector<HTMLElement>('[data-tm-panel-title]')!;
+    const panelText = root.querySelector<HTMLElement>('[data-tm-panel-text]')!;
+    // No toque não existe "cursor": a instrução vira "Toque em...".
+    const touchOnly = window.matchMedia('(hover: none)').matches;
+    const defaultText = touchOnly
+      ? (panel.dataset.tmDefaultText ?? '').replace('Passe o cursor sobre', 'Toque em').replace('Hover over', 'Tap')
+      : (panel.dataset.tmDefaultText ?? '');
+    if (touchOnly) panelText.textContent = defaultText;
+
+    const dome = root.querySelector<SVGGElement>('[data-tm-dome]')!;
+    const gArcs = root.querySelector<SVGGElement>('[data-tm-arcs]')!;
+    const gFulls = root.querySelector<SVGGElement>('[data-tm-fulls]')!;
+    const gHits = root.querySelector<SVGGElement>('[data-tm-hits]')!;
+    const fulls = Array.from(root.querySelectorAll<SVGPathElement>('[data-tm-full]'));
+    const fills = Array.from(root.querySelectorAll<SVGPathElement>('[data-tm-fill]'));
+    const arcs = Array.from(root.querySelectorAll<SVGPathElement>('[data-tm-arc]'));
+    const hits = Array.from(root.querySelectorAll<SVGPathElement>('[data-tm-hit]'));
+    const labels = Array.from(root.querySelectorAll<HTMLElement>('.tm__cat-label'));
+    const items = Array.from(root.querySelectorAll<HTMLElement>('.tm__item'));
+    const pills = Array.from(root.querySelectorAll<HTMLElement>('[data-tm-pill]'));
+    const listUls = Array.from(root.querySelectorAll<HTMLElement>('[data-tm-list-ul]'));
+    const listHint = root.querySelector<HTMLElement>('[data-tm-list-hint]')!;
+    const listBtns = Array.from(root.querySelectorAll<HTMLElement>('.tm__list-btn'));
+    const replayBtn = root.querySelector<HTMLButtonElement>('[data-tm-replay]')!;
+    const centerBtn = root.querySelector<HTMLElement>('[data-tm-center]')!;
+
+    const itemsOf = (k: number) => items.filter((i) => Number(i.dataset.stage) === k);
+
+    // ----- estado -----
+    let runId = 0; // incrementa pra cancelar qualquer sequência em andamento
+    let stage = -1; // etapa em foco (sequência ou navegação manual)
+    let hoverPaused = false;
+    let resumeTimer: ReturnType<typeof setTimeout> | undefined;
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    let hideRevealTimer: ReturnType<typeof setTimeout> | undefined;
+    let revealed = -1; // etapa cujos tópicos estão à mostra no estado final (hover)
+
+    const isPaused = () => hoverPaused;
+
+    // ----- utilidades -----
+    /** Espera `ms` (só conta quando não está pausado); resolve false se a sequência foi cancelada. */
+    function wait(ms: number, id: number, force = false): Promise<boolean> {
+      return new Promise((resolve) => {
+        let left = ms / speed;
+        const step = 50;
+        const t = setInterval(() => {
+          if (id !== runId) {
+            clearInterval(t);
+            resolve(false);
+            return;
+          }
+          if (force || !isPaused()) left -= step;
+          if (left <= 0) {
+            clearInterval(t);
+            resolve(true);
+          }
+        }, step);
+      });
+    }
+
+    /** Posição do nome+ícone de cada etapa: seq = a ativa no topo da cúpula; final = um por arco. */
+    function applyPositions(kind: 'seq' | 'final') {
+      const k = reduced ? 'final' : kind;
+      labels.forEach((el) => {
+        el.style.left = `${k === 'seq' ? el.dataset.sx : el.dataset.fx}%`;
+        el.style.top = `${k === 'seq' ? el.dataset.sy : el.dataset.fy}%`;
+      });
+    }
+
+    function reflow(el: Element) {
+      el.getBoundingClientRect(); // força o layout: a transição parte do estado vazio
+    }
+
+    /** Pinta o traço (da esquerda pra direita). */
+    function paint(el: Element) {
+      if (el.classList.contains('is-drawn')) return;
+      el.classList.add('is-painting');
+      if (!reduced) reflow(el);
+      el.classList.add('is-drawn');
+    }
+
+    /** Apaga sem animação. */
+    function unpaint(el: Element) {
+      const e = el as SVGElement;
+      e.style.transition = 'none';
+      el.classList.remove('is-painting', 'is-drawn');
+      reflow(el);
+      e.style.transition = '';
+    }
+
+    /** Quem fica por cima: os 4 arcos (estado final) ou o anel inteiro (sequência). As áreas de clique sempre no topo. */
+    function stack(top: 'arcs' | 'fulls') {
+      dome.appendChild(top === 'arcs' ? gFulls : gArcs);
+      dome.appendChild(top === 'arcs' ? gArcs : gFulls);
+      dome.appendChild(gHits);
+    }
+
+    /** Meio disco interno na cor da etapa k (ou nenhum). */
+    function tint(k: number | null) {
+      fills.forEach((f, i) => f.classList.toggle('is-on', i === k));
+    }
+
+    function clearArcs() {
+      [...arcs, ...fulls].forEach(unpaint);
+      arcs.forEach((a) => a.classList.remove('is-dim', 'is-hover'));
+      tint(null);
+    }
+
+    // ----- painel (com fade) -----
+    function setPanel(kicker: string, title: string, text: string, idle: boolean) {
+      const same = panelKicker.textContent === kicker && panelTitle.textContent === title && panelText.textContent === text;
+      if (same) return;
+      panelInner.classList.add('is-swapping');
+      setTimeout(
+        () => {
+          panel.classList.toggle('is-idle', idle);
+          panelKicker.textContent = kicker;
+          panelTitle.textContent = title;
+          panelText.textContent = text;
+          panelInner.classList.remove('is-swapping');
+        },
+        reduced ? 0 : 160,
+      );
+    }
+
+    function clearActives() {
+      items.forEach((b) => b.classList.remove('is-active'));
+      listBtns.forEach((b) => b.classList.remove('is-active'));
+      labels.forEach((b) => b.classList.remove('is-active'));
+    }
+
+    function closePanel() {
+      clearActives();
+      setPanel('', '', defaultText, true);
+    }
+
+    function openItem(catId: string, itemId: string) {
+      const cat = map[catId];
+      const item = cat?.itens[itemId];
+      if (!cat || !item) return;
+      clearTimeout(idleTimer);
+      clearActives();
+      items.concat(listBtns).forEach((b) => b.classList.toggle('is-active', b.dataset.tmItem === itemId));
+      labels.forEach((b) => b.classList.toggle('is-active', b.dataset.tmCat === catId));
+      setPanel(cat.nome, item.titulo, item.texto, false);
+    }
+
+    function openCategory(catId: string) {
+      const cat = map[catId];
+      if (!cat) return;
+      clearTimeout(idleTimer);
+      clearActives();
+      labels.forEach((b) => b.classList.toggle('is-active', b.dataset.tmCat === catId));
+      const text = cat.termoOriginal
+        ? `${cat.resumo} Na Teoria da Mudança completa, esse ponto de partida é chamado de "${cat.termoOriginal}".`
+        : cat.resumo;
+      setPanel(cat.nome, cat.tituloCompleto ?? cat.nome, text, false);
+    }
+
+    // ----- visual das etapas -----
+    function setPills(k: number | null) {
+      pills.forEach((p, i) => p.classList.toggle('is-active', i === k));
+    }
+
+    function setList(k: number | null) {
+      listUls.forEach((ul, i) => (ul.hidden = i !== k));
+      listHint.hidden = k !== null;
+    }
+
+    function showLabels(k: number | 'all' | null, kind: 'seq' | 'final') {
+      applyPositions(kind);
+      labels.forEach((l, i) => l.classList.toggle('is-shown', k === 'all' || i === k));
+    }
+
+    function hideItems() {
+      items.forEach((i) => i.classList.remove('is-shown'));
+      revealed = -1;
+    }
+
+    function showItems(k: number) {
+      itemsOf(k).forEach((i) => i.classList.add('is-shown'));
+    }
+
+    /** Etapa k em foco: pílula, lista (celular) e o meio disco interno na cor dela. */
+    function focusStage(k: number) {
+      stage = k;
+      tint(k);
+      setPills(k);
+      setList(k);
+    }
+
+    // ----- estado final -----
+    function enterFinal() {
+      root.dataset.state = 'final';
+      stage = -1;
+      hideItems();
+      applyPositions('final');
+      tint(null);
+      arcs.forEach((a) => a.classList.remove('is-dim', 'is-hover'));
+      stack('arcs');
+      arcs.forEach(paint); // os 4 arcos se pintam sobre o anel inteiro: a cúpula se "divide" nas quatro cores
+      const id = runId;
+      setTimeout(
+        () => {
+          if (id === runId) fulls.forEach(unpaint);
+        },
+        (reduced ? 450 : T.paint + 700) / speed,
+      );
+      showLabels('all', 'final');
+      setPills(null);
+      setList(null);
+      replayBtn.hidden = false;
+    }
+
+    // ----- sequência -----
+    /** Pinta o anel inteiro na cor da etapa k, por cima do anterior. */
+    function paintFull(k: number) {
+      stack('fulls');
+      gFulls.appendChild(fulls[k]);
+      paint(fulls[k]);
+    }
+
+    async function showStage(id: number, k: number): Promise<boolean> {
+      root.dataset.state = 'seq';
+      replayBtn.hidden = true;
+      hideItems();
+      showLabels(null, 'seq');
+      focusStage(k);
+      showLabels(k, 'seq');
+      paintFull(k);
+      if (!(await wait(reduced ? 400 : T.paint, id))) return false;
+      // anel já coberto pela cor nova: os anteriores podem sair
+      fulls.forEach((f, i) => {
+        if (i !== k) unpaint(f);
+      });
+      for (const it of itemsOf(k)) {
+        it.classList.add('is-shown');
+        if (!(await wait(T.stagger, id))) return false;
+      }
+      return true;
+    }
+
+    async function sequence(id: number, from: number) {
+      for (let k = from; k < STAGES; k++) {
+        if (!(await showStage(id, k))) return;
+        if (!(await wait(T.hold, id))) return;
+        hideItems();
+        if (!(await wait(T.out, id))) return;
+      }
+      enterFinal();
+    }
+
+    function start() {
+      const id = ++runId;
+      clearArcs();
+      hideItems();
+      showLabels(null, 'seq');
+      setPills(null);
+      setList(null);
+      stack('fulls');
+      root.dataset.state = 'seq';
+      hoverPaused = false;
+      replayBtn.hidden = true;
+      closePanel();
+      void sequence(id, 0);
+    }
+
+    // ----- navegação manual (pílula, arco, rótulo da etapa) -----
+    async function goToStage(k: number) {
+      const id = ++runId;
+      // Fica na etapa escolhida (sem avançar sozinho); "Ver de novo" refaz a animação e o selo volta à visão geral.
+      root.dataset.state = 'manual';
+      replayBtn.hidden = false;
+      hideItems();
+      showLabels(null, 'seq');
+      focusStage(k);
+      arcs.forEach((a) => a.classList.remove('is-dim', 'is-hover'));
+      showLabels(k, 'seq');
+      paintFull(k);
+      if (!(await wait(reduced ? 100 : T.paint, id))) return;
+      fulls.forEach((f, i) => {
+        if (i !== k) unpaint(f);
+      });
+      arcs.forEach(unpaint);
+      itemsOf(k).forEach((it, j) => {
+        it.style.setProperty('--d', `${j * 70}ms`);
+        it.classList.add('is-shown');
+      });
+    }
+
+    // ----- eventos -----
+    pills.forEach((p) => p.addEventListener('click', () => void goToStage(Number(p.dataset.tmPill))));
+
+    labels.forEach((l) => {
+      const k = Number(l.dataset.stage);
+      const catId = l.dataset.tmCat!;
+      l.addEventListener('pointerenter', (e) => {
+        if (e.pointerType === 'touch') return;
+        openCategory(catId);
+        if (root.dataset.state === 'final') revealStage(k);
+      });
+      l.addEventListener('pointerleave', (e) => {
+        if (e.pointerType === 'touch') return;
+        scheduleLeave();
+      });
+      l.addEventListener('focus', () => openCategory(catId));
+      l.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openCategory(catId);
+        void goToStage(k);
+      });
+    });
+
+    // Estado final: o cursor sobre um arco revela os tópicos daquela etapa; clicar leva até ela.
+    function revealStage(k: number) {
+      clearTimeout(hideRevealTimer);
+      if (revealed === k) return;
+      hideItems();
+      revealed = k;
+      tint(k);
+      arcs.forEach((a, i) => {
+        a.classList.toggle('is-hover', i === k);
+        a.classList.toggle('is-dim', i !== k);
+      });
+      itemsOf(k).forEach((it, j) => {
+        it.style.setProperty('--d', `${j * 70}ms`);
+        it.classList.add('is-shown');
+      });
+      setList(k);
+    }
+
+    function scheduleLeave() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(closePanel, 350);
+      if (root.dataset.state === 'final') {
+        clearTimeout(hideRevealTimer);
+        hideRevealTimer = setTimeout(() => {
+          hideItems();
+          tint(null);
+          arcs.forEach((a) => a.classList.remove('is-hover', 'is-dim'));
+        }, 450);
+      }
+    }
+
+    hits.forEach((h) => {
+      const k = Number(h.dataset.tmHit);
+      h.addEventListener('pointerenter', (e) => {
+        if (root.dataset.state !== 'final' || e.pointerType === 'touch') return;
+        revealStage(k);
+      });
+      h.addEventListener('pointerleave', (e) => {
+        if (e.pointerType === 'touch') return;
+        scheduleLeave();
+      });
+      h.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (root.dataset.state === 'final') void goToStage(k);
+      });
+    });
+
+    function holdOn() {
+      hoverPaused = true;
+      clearTimeout(resumeTimer);
+    }
+    function holdOff() {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(() => (hoverPaused = false), T.resume);
+    }
+
+    function bindItem(btn: HTMLElement) {
+      const catId = btn.dataset.tmCat!;
+      const itemId = btn.dataset.tmItem!;
+      btn.addEventListener('pointerenter', (e) => {
+        if (e.pointerType === 'touch') return;
+        clearTimeout(hideRevealTimer);
+        openItem(catId, itemId);
+        holdOn();
+      });
+      btn.addEventListener('pointerleave', (e) => {
+        if (e.pointerType === 'touch') return;
+        scheduleLeave();
+        holdOff();
+      });
+      btn.addEventListener('focus', () => {
+        openItem(catId, itemId);
+        holdOn();
+      });
+      btn.addEventListener('blur', holdOff);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openItem(catId, itemId);
+        holdOn();
+        holdOff();
+      });
+    }
+    items.forEach(bindItem);
+    listBtns.forEach(bindItem);
+
+    replayBtn.addEventListener('click', () => start());
+
+    // Selo central: fecha a explicação; numa etapa escolhida à mão, volta à visão geral (os 4 arcos juntos).
+    function backToOverview() {
+      runId++;
+      hideItems();
+      showLabels(null, 'seq');
+      enterFinal();
+    }
+
+    centerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closePanel();
+      if (root.dataset.state === 'manual') backToOverview();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!root.contains(e.target as Node)) closePanel();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePanel();
+    });
+
+    // ----- partida: a animação só começa quando a seção entra na tela -----
+    applyPositions('final');
+    if ('IntersectionObserver' in window) {
+      // Antes de entrar na tela: só o selo e o anel cinza ("trilho" vazio).
+      clearArcs();
+      showLabels(null, 'final');
+      hideItems();
+      root.dataset.state = 'idle';
+      const obs = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((en) => en.isIntersecting)) {
+            obs.disconnect();
+            start();
+          }
+        },
+        { threshold: 0.4 },
+      );
+      obs.observe(root.querySelector('.tm__frame')!);
+    } else {
+      enterFinal();
+    }
+  });
+</script>

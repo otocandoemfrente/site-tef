@@ -1,0 +1,314 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+import PendingNote from './PendingNote.astro';
+
+interface StepItem {
+  icone: IconName;
+  texto: string;
+}
+
+interface ImpactItem {
+  icone: IconName;
+  /** Ausente enquanto o dado real não existe — nesse caso `pending` entra no lugar do número. */
+  numero?: string;
+  pending?: string;
+  texto: string;
+}
+
+interface Props {
+  etapa1: { titulo: string; texto: string; fotoLabel: string; itens: ImpactItem[] };
+  etapa2: { titulo: string; itens: StepItem[] };
+  etapa3: { titulo: string; itens: ImpactItem[]; fotoLabel: string };
+}
+
+const { etapa1, etapa2, etapa3 } = Astro.props;
+
+// "**palavra**" no conteúdo vira <strong> — mesmo espírito leve de marcação
+// usado no resto do site, sem puxar um parser de markdown inteiro pra isso.
+function boldParts(text: string) {
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) => ({ text: part, bold: i % 2 === 1 }));
+}
+---
+
+<div class="frente-steps-outer" data-frente-connector>
+  {/* Uma seta só, que "viaja" da primeira à última etapa conforme a página rola — substitui os
+      indicadores fixos por coluna (seta/seta/ponto) que existiam antes. Só desktop (3 colunas
+      lado a lado); no mobile, empilhado, a ordem de leitura já basta. */}
+  <div class="frente-steps__connector" aria-hidden="true">
+    <span class="frente-steps__connector-track"></span>
+    <span class="frente-steps__connector-fill" data-connector-fill></span>
+    <span class="frente-steps__connector-arrow" data-connector-arrow>→</span>
+  </div>
+
+  <div class="frente-steps">
+    <div class="frente-step" data-reveal-block>
+      <h4>{etapa1.titulo}</h4>
+      <p>{etapa1.texto}</p>
+      <ul class="frente-step__impact">
+        {
+          etapa1.itens.map((item) => (
+            <li>
+              <Icon name={item.icone} class="frente-step__icon" />
+              <div>
+                {item.numero ? <strong>{item.numero}</strong> : <PendingNote text={item.pending!} compact />}
+                {item.numero && <span>{item.texto}</span>}
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="frente-step" data-reveal-block style="transition-delay:80ms">
+      <h4>{etapa2.titulo}</h4>
+      <ul class="frente-step__list">
+        {
+          etapa2.itens.map((item) => (
+            <li>
+              <Icon name={item.icone} class="frente-step__icon" />
+              <span>
+                {boldParts(item.texto).map((p) => (p.bold ? <strong>{p.text}</strong> : p.text))}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="frente-step" data-reveal-block style="transition-delay:160ms">
+      <h4>{etapa3.titulo}</h4>
+      <ul class="frente-step__impact">
+        {
+          etapa3.itens.map((item) => (
+            <li>
+              <Icon name={item.icone} class="frente-step__icon" />
+              <div>
+                {item.numero ? <strong>{item.numero}</strong> : <PendingNote text={item.pending!} compact />}
+                {item.numero && <span>{item.texto}</span>}
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</div>
+
+<style>
+  .frente-steps {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    /* Mais ar entre a frase de cima e as três colunas (a pedido: "as três colunas também, tá tudo muito colado"). */
+    margin: clamp(2rem, 1.5rem + 2vw, 3.5rem) 0 1.5rem;
+  }
+
+  .frente-step {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .frente-step h4 {
+    font-size: var(--text-h3);
+    font-weight: 500;
+    color: var(--color-text);
+  }
+
+  .frente-step p {
+    color: var(--color-text-secondary);
+    max-width: none;
+  }
+
+  .frente-step__list,
+  .frente-step__impact {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .frente-step__list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+
+  .frente-step__list li span {
+    color: var(--color-text-secondary);
+  }
+
+  .frente-step__list li strong {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  .frente-step__impact li {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .frente-step__impact li div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .frente-step__impact li strong {
+    font-size: clamp(1.75rem, 1.5rem + 1vw, 2.25rem);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-primary);
+  }
+
+  .frente-step__impact li span {
+    color: var(--color-text-secondary);
+  }
+
+  /*
+    Bug real (1): estas regras viviam sem :global() e nunca alcançavam o <svg>, porque ele é
+    renderizado DENTRO do componente filho Icon.astro — o escopo automático do Astro (o atributo
+    data-astro-cid-*) só é aplicado a elementos que O PRÓPRIO FrenteVisualSteps renderiza
+    diretamente, não a elementos de dentro de um componente filho. Sem o seletor bater, o SVG
+    caía no tamanho padrão do navegador (~300px) só limitado pelo espaço disponível no flex —
+    por isso os ícones apareciam gigantes. Mesmo padrão de escape já usado em
+    ".historia :global(.media-placeholder)" na página de Atuação.
+
+    Bug real (2), depois de adicionar :global(): um `:global(.frente-step__icon)` sozinho tem
+    especificidade (0,1,0) — mas o <svg> em Icon.astro também tem um tamanho padrão próprio
+    (ver Icon.astro), num seletor `svg[data-astro-cid-X]` com especificidade (0,1,1), maior.
+    Esse padrão interno vencia aqui (ícones da lista ficavam 1.25rem em vez de 1.05rem) sem
+    aparentar erro nenhum — só os ícones de impacto (com o ".frente-step__impact" na frente)
+    tinham especificidade alta o bastante pra vencer. Precisa de um seletor composto (ancestral
+    + :global()) nos dois casos, não só onde "por acaso" já tinha um ancestral.
+  */
+  .frente-step__list :global(.frente-step__icon) {
+    flex: none;
+    width: 1.05rem;
+    height: 1.05rem;
+    color: var(--color-primary);
+    margin-top: 0.15rem;
+  }
+
+  .frente-step__impact :global(.frente-step__icon) {
+    flex: none;
+    width: 1.3rem;
+    height: 1.3rem;
+    color: var(--color-primary);
+    margin-top: 0;
+  }
+
+  /* Conector único com a seta animada — só desktop, alinhado com a largura das 3 colunas. */
+  .frente-steps__connector {
+    display: none;
+  }
+
+  @media (min-width: 720px) {
+    .frente-steps {
+      grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+      column-gap: clamp(1.5rem, 1rem + 2.5vw, 3rem);
+    }
+
+    .frente-step {
+      grid-column: span 4;
+    }
+
+    .frente-step:not(:first-child) {
+      padding-left: clamp(1.5rem, 1rem + 2.5vw, 3rem);
+      border-left: 1px solid var(--color-border);
+    }
+
+    .frente-steps__connector {
+      display: block;
+      position: relative;
+      height: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .frente-steps__connector-track {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--color-border);
+      transform: translateY(-50%);
+    }
+
+    .frente-steps__connector-fill {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 0%;
+      height: 2px;
+      background: var(--color-primary);
+      transform: translateY(-50%);
+    }
+
+    .frente-steps__connector-arrow {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      transform: translate(-50%, -50%);
+      color: var(--color-primary);
+      font-weight: 700;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+  }
+</style>
+
+<script>
+  /*
+    A seta única "viaja" da primeira etapa (Diretores Regionais) até a última (Impacto
+    nacional) conforme a seção passa pela viewport. Mesma técnica de scroll (
+    getBoundingClientRect, sem IntersectionObserver) já usada nas gavetas dos "três
+    movimentos" da Home. Sem prefers-reduced-motion, a seta já chega pronta no fim — nunca
+    fica presa no início esperando um scroll que o usuário pode ter desativado.
+
+    Bug real corrigido aqui, três rodadas: a primeira fórmula tinha uma folga extra embutida
+    (progress=1 só quando a base do bloco chegava a 25% do topo da viewport) — trocada por
+    progress=1 quando a BASE do bloco encosta no topo da tela. Na prática isso ainda não
+    funcionava: o conector (a barra com a seta) fica no TOPO do bloco, e o bloco inteiro
+    (conector + as 3 colunas de texto, bem mais alto que a barra em si) só termina de passar
+    quando a base cruza y=0 — nesse instante o conector, no topo do bloco, já tinha saído da
+    tela havia muito tempo, então quem rolava a página nunca via a seta chegar a 100% (ela
+    congelava num valor menor assim que saía de vista). Trocado por progress=1 quando o TOPO do
+    bloco (onde o conector vive) chega ao topo da tela — mas o cabeçalho do site é
+    `position: sticky; top: 0` (`.site-header`), então "topo da tela" na prática tem ~73px
+    cobertos por ele: sem descontar isso, a seta ainda completava exatamente no instante em que
+    o cabeçalho passava a cobrir o conector. Corrigido medindo a altura real do cabeçalho
+    (`.site-header`, o mesmo elemento, não um valor hardcoded) e usando essa altura como o novo
+    "topo" da viewport na fórmula — a seta agora completa com o conector ainda inteiramente
+    visível, logo abaixo do cabeçalho.
+  */
+  const motionAllowed = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+  const headerHeight = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
+
+  document.querySelectorAll<HTMLElement>('[data-frente-connector]').forEach((wrap) => {
+    const fill = wrap.querySelector<HTMLElement>('[data-connector-fill]');
+    const arrow = wrap.querySelector<HTMLElement>('[data-connector-arrow]');
+    if (!fill || !arrow) return;
+
+    if (!motionAllowed) {
+      fill.style.width = '100%';
+      arrow.style.left = '100%';
+      return;
+    }
+
+    function update() {
+      const rect = wrap.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const progress = Math.min(Math.max((vh - rect.top) / (vh - headerHeight), 0), 1);
+      fill!.style.width = `${progress * 100}%`;
+      arrow!.style.left = `${progress * 100}%`;
+    }
+
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+  });
+</script>

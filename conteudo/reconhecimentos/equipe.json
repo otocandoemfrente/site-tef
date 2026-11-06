@@ -1,0 +1,11 @@
+{
+  "pessoas": [
+    { "nome": "Luiza Vilanova", "cargo": "Fundadora e CEO" },
+    { "nome": "Milanna Rebelatto", "cargo": "Vice-Presidente", "bio": "Formada em Administração. Curiosa por tudo que envolva astronomia, Carl Jung ou florestas." },
+    { "nome": "Isabella Okamoto", "cargo": "Líder de Comunicação" },
+    { "nome": "Luísa Michelin", "cargo": "Líder de Gestão Interna" },
+    { "nome": "Sarah Manzano", "cargo": "Líder de Financeiro", "bio": "Técnica em Secretariado. Interessada em tecnologia, dados e impacto social. Patinadora artística." }
+  ],
+  "bioPendente": "[PENDENTE: uma linha de bio por pessoa]",
+  "conselhoPendente": "[PENDENTE: existe conselho consultivo? quem são? ]"
+}

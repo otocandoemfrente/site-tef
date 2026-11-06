@@ -1,0 +1,90 @@
+---
+import MediaPlaceholder from './MediaPlaceholder.astro';
+
+interface Props {
+  /** Vira "Frente {numero}" na legenda — ignorado se `label` for passado. */
+  numero?: string;
+  /** Substitui "Frente {numero}" por inteiro (ex.: "Complemento", quando não há mais uma Frente 01 para contrastar). */
+  label?: string;
+  titulo: string;
+  tagline: string;
+  /** Omitido quando o slot "contexto" é usado no lugar (ex.: esquema visual da Frente 02). */
+  contexto?: string;
+  /** Omitido quando as fotos já fazem parte de um slot customizado (ex.: esquema visual da Frente 02). */
+  fotos?: number;
+}
+
+const { numero, label, titulo, tagline, contexto, fotos } = Astro.props;
+---
+
+<article class="frente-module" data-reveal-block>
+  {(label || numero) && <p class="caption frente-module__position">{label ?? `Frente ${numero}`}</p>}
+  <h3 data-reveal-words>{titulo}</h3>
+  <p class="frente-module__tagline">{tagline}</p>
+  <slot name="contexto">{contexto && <p class="frente-module__contexto">{contexto}</p>}</slot>
+
+  {fotos !== undefined && (
+    <div class="frente-module__photos">
+      {Array.from({ length: fotos }).map((_, i) => <MediaPlaceholder label={`${titulo} — foto ${i + 1}`} ratio="4 / 3" />)}
+    </div>
+  )}
+</article>
+
+<style>
+  .frente-module {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .frente-module__position {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  /*
+    Título no tamanho dos títulos de seção da página ("Sem superpoderes, mas super-heróis", "Onde já passamos"):
+    ≈60px, peso 700, -0,03em, com fio de 1px embaixo (a pedido: "Como chegamos nas escolas? igual os títulos").
+  */
+  .frente-module h3 {
+    margin: 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: clamp(2.25rem, 1.5rem + 3.5vw, 4.5rem);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-text);
+    max-width: none;
+  }
+
+  /* Reduzida a pedido (era --text-h3, lia grande demais ao lado do h3 logo acima). */
+  /* Respiro a mais entre o título (com o fio) e a frase "Formamos jovens do interior…" (a pedido: "tudo muito colado"). */
+  .frente-module__tagline {
+    margin-top: clamp(1.25rem, 1rem + 1vw, 2rem);
+    font-size: var(--text-body);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    max-width: 46rem;
+  }
+
+  /* Mesma largura da tagline acima — não o --measure (68ch) padrão, que sobrava espaço morto no container largo. */
+  .frente-module__contexto {
+    max-width: 46rem;
+  }
+
+  .frente-module__photos {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .frente-module__photos {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,933 @@
+---
+import timesPt from '../../conteudo/atuacao/times.json';
+import timesEn from '../../conteudo/en/atuacao/times.json';
+import { localeFromUrl } from '../i18n/locale';
+
+interface Time {
+  id: string;
+  nome: string;
+  texto: string;
+  nota?: string;
+}
+
+interface Props {
+  numero: string;
+  numeroLabel: string;
+  kicker: string;
+}
+
+const { numero, numeroLabel, kicker } = Astro.props;
+// Os textos dos 8 times vêm do idioma da página (a posição de cada um é por `id`, igual nos dois).
+const timesData = localeFromUrl(Astro.url) === 'en' ? timesEn : timesPt;
+const times = timesData.times as Time[];
+
+/*
+  Terceira rodada — distribuição bem mais aberta, a pedido explícito ("tudo está concentrado
+  no centro... quero que o mapa utilize muito mais a largura e a altura da viewport"). `x`/`y`
+  agora cobrem quase toda a extensão do stage (de ~6 a ~94), não mais uma faixa estreita perto
+  do centro — e o stage em si deixou de ser um quadrado pequeno pra virar um retângulo largo
+  que ocupa a maior parte da seção (ver <style>). `scale` continua sutil, DR no meio da faixa.
+*/
+/*
+  `ym` (mobile) NÃO segue a mesma lógica do `y` (desktop) pros times "operacional"/"financeiro"
+  — bug real, achado visualmente e confirmado medindo `getBoundingClientRect`: numa tela
+  estreita o "363" ocupa uma fatia MUITO maior da largura disponível (proporcionalmente) do que
+  no desktop, porque o tamanho mínimo da fonte (`clamp`) não encolhe na mesma proporção que o
+  stage — dois times na mesma altura do centro (como no desktop) ficavam literalmente por cima
+  do número. No mobile, nenhum time fica na mesma altura do núcleo: a composição vira uma pilha
+  de 4 "andares" (comunicação → pedagógico/gestão → operacional/financeiro → trainees/DR →
+  talentos), todos acima ou abaixo do "363", nunca ao lado dele na mesma altura.
+*/
+const layout: Record<string, { x: number; y: number; xm: number; ym: number; scale: number }> = {
+  pedagogico: { x: 13, y: 16, xm: 27, ym: 22, scale: 0.98 },
+  comunicacao: { x: 50, y: 6, xm: 50, ym: 8, scale: 1 },
+  gestao: { x: 87, y: 16, xm: 73, ym: 22, scale: 1.03 },
+  operacional: { x: 6, y: 50, xm: 17, ym: 33, scale: 0.96 },
+  financeiro: { x: 94, y: 50, xm: 83, ym: 33, scale: 1 },
+  trainees: { x: 15, y: 85, xm: 22, ym: 71, scale: 0.95 },
+  dr: { x: 85, y: 85, xm: 78, ym: 71, scale: 1 },
+  talentos: { x: 50, y: 96, xm: 50, ym: 88, scale: 0.96 },
+};
+
+/*
+  Classificação em "pontos cardeais" (3×3, sem o centro) a partir da própria posição — o mesmo
+  cálculo decide pra que lado o pop-up abre E de que direção o módulo entra na animação inicial,
+  sempre se afastando do centro (nunca por cima do 363) e nunca alinhado nos dois eixos ao mesmo
+  tempo só pro centro (o "meio" só existe no eixo perpendicular ao lado em que o módulo está).
+*/
+function axisPos(y: number): 'above' | 'middle' | 'below' {
+  if (y < 40) return 'above';
+  if (y > 60) return 'below';
+  return 'middle';
+}
+function axisAlign(x: number): 'left' | 'center' | 'right' {
+  if (x < 40) return 'left';
+  if (x > 60) return 'right';
+  return 'center';
+}
+
+/*
+  Uma cor por time (sétima rodada — "o design tem que ser mais legal, tá meio monótono"): oito tons CLAROS e
+  vivos, todos sobre o fundo azul-escuro e sempre com texto escuro por cima (contraste ≥ 7:1). Ficam em sequência
+  na ordem de times.json; nenhum time "vale mais" que outro, só tem cor própria — a mesma cor pinta o módulo, o
+  fio até o 363 e a barra do pop-up.
+*/
+/*
+  CORES REVISTAS (a pedido: "não gosto das cores dos boxes dos 363"): os oito tons pastel (amarelo, lima, verde,
+  azul-claro, rosa, lilás, pêssego, off-white) saíram. Todos os boxes são amarelo-limão (--color-accent, a pedido: "boxes
+  amarelinhos") com texto escuro; no hover/foco/ativo viram off-white; o fio e a barra do pop-up seguem amarelo-limão.
+*/
+const cores = ['var(--color-accent)'];
+
+const nodes = times.map((t, i) => {
+  const l = layout[t.id];
+  return {
+    ...t,
+    ...l,
+    cor: cores[i % cores.length],
+    index: i,
+    pos: axisPos(l.y),
+    align: axisAlign(l.x),
+  };
+});
+---
+
+<div class="mapa-times" data-mapa-times>
+  <h2 id="sustentacao-heading" class="visually-hidden">{kicker}</h2>
+  <div class="mapa-times__wrap" data-mapa-wrap>
+    <div class="mapa-times__sticky">
+      <div class="mapa-times__stage" data-mapa-stage>
+        <svg class="mapa-times__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {
+            nodes.map((n) => (
+              <line data-line data-target={n.id} x1="50" y1="50" x2={n.x} y2={n.y} class="mapa-times__line-desktop" style="--c:var(--color-accent)" />
+            ))
+          }
+          {
+            nodes.map((n) => (
+              <line data-line-m data-target={n.id} x1="50" y1="50" x2={n.xm} y2={n.ym} class="mapa-times__line-mobile" style="--c:var(--color-accent)" />
+            ))
+          }
+        </svg>
+
+        {/* Anéis que se expandem e somem a partir do 363 (decorativo): a rede "irradiando" do centro. */}
+        <div class="mapa-times__rings" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="mapa-times__core">
+          <span class="mapa-times__number" data-mapa-count data-target={numero}>0</span>
+          <span class="caption mapa-times__number-label">{numeroLabel}</span>
+        </div>
+
+        {
+          nodes.map((n) => {
+            const popupId = `mapa-popup-${n.id}`;
+            // Deslocamento inicial da entrada — sempre "de fora pra dentro" (mesma direção do
+            // pop-up: um módulo à esquerda entra vindo mais da esquerda, um de cima vem de mais
+            // cima etc.), nunca um movimento genérico igual pra todos.
+            const enterX = n.align === 'left' ? -18 : n.align === 'right' ? 18 : 0;
+            const enterY = n.pos === 'above' ? -18 : n.pos === 'below' ? 18 : 0;
+            return (
+              <div
+                class="mapa-times__node-wrap"
+                data-node-wrap
+                data-id={n.id}
+                data-pos={n.pos}
+                data-align={n.align}
+                style={`--c:${n.cor}; --float-delay:${-(n.index % 4) * 0.9}s; --float-dur:${4.2 + (n.index % 3) * 0.7}s; --x:${n.x}%; --y:${n.y}%; --xm:${n.xm}%; --ym:${n.ym}%; --scale:${n.scale}; --enter-x:${enterX}px; --enter-y:${enterY}px; transition-delay:${120 + n.index * 70}ms`}
+              >
+                <button type="button" class="mapa-times__node" data-node aria-expanded="false" aria-describedby={popupId}>
+                  <span class="mapa-times__node-name">{n.nome}</span>
+                </button>
+                <div class="mapa-times__popup" id={popupId} role="tooltip">
+                  <p class="mapa-times__popup-name">{n.nome}</p>
+                  <p>{n.texto}</p>
+                  {n.nota && <p class="mapa-times__popup-nota">{n.nota}</p>}
+                </div>
+              </div>
+            );
+          })
+        }
+
+        {
+          /*
+            No mobile os pop-ups por módulo saem de cena (ver <style>) — numa tela estreita, um
+            módulo perto da borda não tem espaço nem pra abrir "pra dentro" nem "pra fora" sem
+            ultrapassar a viewport OU invadir a área de proteção do 363 ao mesmo tempo (as duas
+            distâncias disponíveis são pequenas demais pra satisfazer as duas regras juntas).
+            Em vez de tentar espremer isso, um painel único e fixo dentro do próprio stage
+            (sempre na mesma posição seguro, nunca dependente de onde o módulo tocado está)
+            substitui os pop-ups flutuantes só nesse breakpoint — o JS troca o conteúdo dele a
+            cada toque, lendo o mesmo texto que já está no pop-up (desktop) daquele módulo.
+          */
+        }
+        <div class="mapa-times__mobile-panel" data-mapa-panel role="status" aria-live="polite">
+          <p class="mapa-times__popup-name" data-panel-name></p>
+          <p data-panel-text></p>
+          <p class="mapa-times__popup-nota" data-panel-nota hidden></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .mapa-times {
+    position: relative;
+  }
+
+  /* ===== mapa interativo ===== */
+  .mapa-times__wrap {
+    position: relative;
+  }
+
+  .mapa-times__sticky {
+    position: static;
+  }
+
+  @media (min-width: 720px) {
+    .mapa-times__wrap {
+      height: 128vh;
+    }
+
+    .mapa-times__sticky {
+      /* top + height descontados um do outro (ver CLAUDE.md): um sticky deslocado do topo por
+         --header-height precisa da mesma altura descontada, senão a base estoura o rodapé. */
+      position: sticky;
+      top: var(--header-height);
+      height: calc(100vh - var(--header-height));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mapa-times__wrap {
+      height: auto;
+    }
+
+    .mapa-times__sticky {
+      position: static;
+      height: auto;
+      padding-block: 1.5rem;
+    }
+  }
+
+  .mapa-times__stage {
+    position: relative;
+    margin-inline: auto;
+    /*
+      Terceira rodada: o stage deixou de ser um quadrado pequeno (aspect-ratio 1/1, max 56rem) —
+      pedido explícito de usar 80–90% da largura e 75–85% da altura disponíveis, não uma ilha
+      centralizada pequena. Como `height` agora é uma porcentagem do `.sticky` (que já tem altura
+      definida, `calc(100vh - header)`), o retângulo resultante acompanha o formato real da tela
+      (bem mais largo que alto no desktop) em vez de forçar um quadrado — não precisa mais do
+      truque `min()`/object-fit-via-CSS da rodada anterior, porque a altura já nunca ultrapassa o
+      espaço sticky disponível por definição.
+      Quarta rodada: mais um pequeno aumento (90%→94% de largura, 82%→88% de altura) — pedido
+      explícito de "evitar excesso de espaço vazio". Como todo o posicionamento dos módulos é em
+      porcentagem, isso escala a composição inteira proporcionalmente (módulos e vãos entre eles
+      crescem juntos) sem reabrir o risco de sobreposição já resolvido nas rodadas anteriores —
+      não mudei nenhuma coordenada x/y, só o tamanho do retângulo que as contém.
+    */
+    width: min(94%, 96rem);
+    height: 88%;
+  }
+
+  @media (max-width: 719px) {
+    .mapa-times__stage {
+      width: 96%;
+      aspect-ratio: 5 / 7;
+      max-width: 28rem;
+    }
+  }
+
+  /* Anéis atrás do 363: três ondas que nascem do número e se espalham, defasadas — a rede irradiando. */
+  .mapa-times__rings {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: clamp(16rem, 36vw, 32rem);
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(circle, rgba(250, 248, 244, 0.1), transparent 62%);
+  }
+
+  .mapa-times__rings span {
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(250, 248, 244, 0.35);
+    border-radius: 50%; /* anéis de verdade: exceção pontual, o objeto É um círculo (os --radius-* seguem 0) */
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .mapa-times__stage.is-revealed .mapa-times__rings span {
+      animation: mapa-ring 6s ease-out infinite;
+    }
+
+    .mapa-times__rings span:nth-child(2) {
+      animation-delay: 2s;
+    }
+
+    .mapa-times__rings span:nth-child(3) {
+      animation-delay: 4s;
+    }
+  }
+
+  @keyframes mapa-ring {
+    0% {
+      transform: scale(0.55);
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(1.9);
+      opacity: 0;
+    }
+  }
+
+  /* Sem movimento: dois anéis parados, só como moldura do número. */
+  @media (prefers-reduced-motion: reduce) {
+    .mapa-times__rings span:nth-child(1) {
+      opacity: 0.35;
+      transform: scale(0.8);
+    }
+
+    .mapa-times__rings span:nth-child(2) {
+      opacity: 0.18;
+      transform: scale(1.25);
+    }
+  }
+
+  @media (max-width: 719px) {
+    .mapa-times__rings {
+      width: 70%;
+    }
+  }
+
+  .mapa-times__lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease 0.5s;
+  }
+
+  .mapa-times__stage.is-revealed .mapa-times__lines {
+    opacity: 1;
+  }
+
+  /* Os fios tracejados em repouso saíram (a pedido): sem tracejado nenhum no mapa. Só o fio do time em foco
+     aparece — sólido, forte e na cor do time (.is-visible, abaixo). */
+  .mapa-times__lines line {
+    stroke: var(--c, var(--color-bg));
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+    opacity: 0;
+    transition: opacity 0.3s ease, stroke-width 0.3s ease;
+  }
+
+  .mapa-times__lines line.is-visible {
+    stroke-width: 2.5;
+    opacity: 1;
+  }
+
+  .mapa-times__line-mobile {
+    display: none;
+  }
+
+  @media (max-width: 719px) {
+    .mapa-times__line-desktop {
+      display: none;
+    }
+
+    .mapa-times__line-mobile {
+      display: inline;
+    }
+  }
+
+  /*
+    ===== núcleo — o número, com uma "área de proteção" ao redor =====
+    Nenhum módulo/linha/pop-up pode entrar nessa área: os oito times ficam todos fora da faixa
+    x:[40,60]/y:[40,60] (ver axisPos/axisAlign no frontmatter), e o próprio núcleo tem largura
+    máxima travada (não deixa o "363" crescer o bastante pra encostar nos módulos mais próximos
+    em telas muito estreitas dentro do range válido do stage).
+  */
+  .mapa-times__core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: 40%;
+    transform: translate(-50%, -50%) scale(0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.2rem;
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    z-index: 1;
+  }
+
+  .mapa-times__stage.is-revealed .mapa-times__core {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .mapa-times__stage.has-active .mapa-times__core {
+    opacity: 0.85;
+  }
+
+  /*
+    Quarta rodada — "363" ainda maior e em branco/claro sobre o novo fundo azul, a pedido
+    explícito ("extremamente grande e dominante", linguagem inspirada no tratamento de números
+    do Global Fund for Children: o numeral é o elemento narrativo principal, não uma legenda
+    grande). Teto do clamp subiu de 18rem pra 22rem — o piso (6rem) e a curva de vw continuam
+    proporcionais, só o topo da escala cresceu.
+  */
+  .mapa-times__number {
+    font-weight: 700;
+    line-height: 0.85;
+    letter-spacing: -0.03em;
+    color: var(--color-bg);
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(6rem, 1rem + 24vw, 22rem);
+  }
+
+  /* Um pouco maior que o --text-caption padrão — pedido explícito pra acompanhar o "363" gigante
+     ao lado, sem virar um segundo título. Cor clara com opacidade — mesma técnica (rgb cru de
+     --color-bg com alpha) já usada na nota do pop-up — hierarquia clara: o numeral é branco
+     sólido, a legenda é um branco mais discreto, nunca competindo com ele. */
+  .mapa-times__number-label {
+    max-width: 15rem;
+    font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.3125rem);
+    line-height: 1.3;
+    color: rgba(250, 248, 244, 0.75);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mapa-times__core {
+      transition: none;
+    }
+  }
+
+  /* ===== módulos dos times — pequenas janelas editoriais, não texto solto ===== */
+  /*
+    Bug real, achado com screenshot de verdade (não só medindo geometria): sem `z-index` próprio,
+    um `position:absolute` sem z-index empata no nível "auto/0" — e QUALQUER elemento com
+    z-index POSITIVO (aqui, `.mapa-times__core`, o "363", com z-index:1) sempre pinta por cima de
+    elementos "auto", não importa a ordem no HTML. Resultado visível: o próprio numeral "363"
+    aparecia por CIMA do texto do pop-up (letras cortadas ao meio pelo "3"), tornando a leitura
+    impossível — exatamente o pedido de "preciso deles completamente legíveis na superfície".
+    `z-index:2` aqui já garante que todo módulo (e o pop-up dentro dele) fica sempre acima do
+    núcleo; o módulo ATIVO ganha mais um degrau (`:hover`/`.is-open`, ver abaixo) pra também
+    nunca ficar atrás de um módulo VIZINHO fechado.
+  */
+  .mapa-times__node-wrap {
+    position: absolute;
+    z-index: 2;
+    left: var(--x);
+    top: var(--y);
+    /* Entra de fora pra dentro (--enter-x/--enter-y) e assenta na posição final — pequeno e
+       elegante, nunca um deslocamento grande. */
+    transform: translate(calc(-50% + var(--enter-x)), calc(-50% + var(--enter-y))) scale(var(--scale));
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  .mapa-times__node-wrap:hover,
+  .mapa-times__node-wrap.is-open {
+    z-index: 3;
+  }
+
+  @media (max-width: 719px) {
+    .mapa-times__node-wrap {
+      left: var(--xm);
+      top: var(--ym);
+    }
+  }
+
+  .mapa-times__stage.is-revealed .mapa-times__node-wrap {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(var(--scale));
+  }
+
+  .mapa-times__node-wrap.is-dimmed {
+    opacity: 0.4;
+  }
+
+  /*
+    A "janelinha" em si: moldura de 1px, fundo quase imperceptível — o suficiente pra ler como
+    um módulo interativo, nunca um card de dashboard. Cantos retos, sem sombra — mesma linha
+    reta/institucional do resto do site. Quarta rodada: sobre o novo fundo azul, a mesma ideia
+    vira um "vidro" claro bem sutil (branco a 8%) com moldura branca translúcida — mesmo
+    tratamento já usado em outras UI sobre fundo escuro no site (ex.: `.jornada-tabs__tab`).
+  */
+  /* Sétima rodada: de "vidro" quase invisível pra blocos sólidos na cor de cada time, texto escuro e uma
+     sombra dura (sem blur, deslocada) — lê como adesivo/etiqueta colada no mapa, não como contorno vazio. */
+  .mapa-times__node {
+    background: var(--c);
+    border: 0;
+    box-shadow: 4px 4px 0 rgba(8, 20, 30, 0.38);
+    padding: 0.6rem 1rem;
+    margin: 0;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  /* Flutuar parado: cada módulo sobe e desce poucos pixels, defasado dos vizinhos (eixo único, nunca curva).
+     Usa a propriedade `translate` (não `transform`) pra somar com a escala do hover sem brigar com ela. */
+  @media (prefers-reduced-motion: no-preference) {
+    .mapa-times__stage.is-revealed .mapa-times__node {
+      animation: mapa-float var(--float-dur, 4.5s) ease-in-out var(--float-delay, 0s) infinite;
+    }
+
+    .mapa-times__node-wrap:hover .mapa-times__node,
+    .mapa-times__node-wrap.is-open .mapa-times__node,
+    .mapa-times__node:focus-visible {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes mapa-float {
+    0%,
+    100% {
+      translate: 0 -4px;
+    }
+    50% {
+      translate: 0 4px;
+    }
+  }
+
+  @media (max-width: 719px) {
+    /*
+      Bug real: nomes de dois times ("Diretoria Regional", "Diretoria de Talentos") em uma só
+      linha (`white-space:nowrap`) chegam a ~200px de largura — combinado com módulos
+      posicionados perto da borda (pedido explícito de espalhar mais), o botão inteiro passava
+      da viewport (confirmado medindo `getBoundingClientRect`, não só olhando). Deixar quebrar
+      linha nesses casos, com um teto de largura, resolve sem precisar recuar a posição de cada
+      módulo — os nomes mais curtos continuam numa linha só (max-width sobra por padrão).
+    */
+    .mapa-times__node {
+      white-space: normal;
+      max-width: 7.5rem;
+      text-align: center;
+    }
+  }
+
+  .mapa-times__node-wrap:hover .mapa-times__node,
+  .mapa-times__node:focus-visible,
+  .mapa-times__node-wrap.is-open .mapa-times__node {
+    background: var(--color-bg);
+    box-shadow: 7px 7px 0 rgba(8, 20, 30, 0.45);
+    transform: scale(1.1);
+  }
+
+  .mapa-times__node:focus-visible {
+    outline: 2px solid var(--color-bg);
+    outline-offset: 4px;
+  }
+
+  .mapa-times__node-name {
+    /* Um pouco mais de presença que a rodada anterior (era --text-caption) — pedido explícito
+       de os labels serem claramente identificáveis como elementos interativos, sempre menores
+       que o 363. Cor branca sobre o novo fundo azul (era --color-text, ilegível aqui). */
+    font-size: var(--text-body);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text);
+  }
+
+  /*
+    Estado ativo em amarelo — reaproveita a exceção já documentada em global.css
+    ("--color-accent como cor de texto é permitido sobre --color-primary-dark"), não uma
+    combinação nova. Dá ao hover um destaque bem mais forte que só trocar de branco pra
+    branco-mais-claro conseguiria.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .mapa-times__node-wrap,
+    .mapa-times__node {
+      transition: none;
+    }
+  }
+
+  /*
+    ===== pop-up flutuante — sempre se afasta do centro, nunca cobre o 363 =====
+    `position: absolute` relativo ao próprio módulo (não ao stage inteiro) + `data-pos`/
+    `data-align` (calculados a partir da posição x/y de cada módulo, ver frontmatter) decidem
+    o lado: um módulo à esquerda abre o pop-up ainda mais à esquerda, um de cima abre mais pra
+    cima — nunca em direção ao centro. Isso, junto da "área de proteção" do núcleo (todo módulo
+    já nasce fora da faixa central), garante que o pop-up nunca alcança o número.
+  */
+  /*
+    O deslocamento de centralização (--ty pra "middle", --tx pra "center") é uma constante por
+    módulo, nunca muda; só a escala (--popup-scale) anima entre fechado/aberto. Combinar os dois
+    numa fórmula só de `transform` (em vez de declarar o `transform` inteiro de novo em cada
+    estado hover/aberto) evita ter que reescrever oito combinações de eixo × estado — e evita o
+    bug real que essa abordagem alternativa causou na primeira tentativa: uma regra genérica
+    `[data-align='left']:hover` também batia nos módulos "middle" (operacional/financeiro, que
+    têm `data-align` lateral E `data-pos='middle'` ao mesmo tempo) e vencia por ordem no arquivo,
+    apagando o `translateY(-50%)` de centralização vertical deles no hover.
+  */
+  /*
+    Quarta rodada — pop-up passou de amarelo pra branco/claro, a pedido explícito ("os pop-ups
+    devem usar branco e tons muito claros"). Cria o mesmo tipo de "cartão claro sobre campo
+    escuro" que a referência (Global Fund for Children) usa pros seus blocos de apoio sobre o
+    fundo escuro do hero — aqui, cada pop-up funciona como um pequeno cartão institucional que
+    "pousa" sobre o campo azul. Borda de 1px reaproveita a moldura reta padrão do site.
+  */
+  .mapa-times__popup {
+    --popup-tx: 0px;
+    --popup-ty: 0px;
+    --popup-scale: 0.94;
+    /*
+      Correção de borda de viewport (ver script): abrindo "pra fora" (ver correção do eixo
+      horizontal acima), os módulos mais perto da lateral do stage (operacional, financeiro, e em
+      telas mais estreitas também pedagogico/gestao/trainees/dr) podem ultrapassar a borda da
+      tela — confirmado medindo `getBoundingClientRect()` em 1280px e 760px antes desta correção
+      (operacional e financeiro estouravam em ambas; pedagogico/trainees também em 760px). Em vez
+      de encolher o pop-up (o que prejudicaria a leitura) ou voltar a abrir pra dentro (o oposto
+      do pedido), o script mede a posição real no momento de abrir e aplica o menor empurrão
+      horizontal necessário pra manter o pop-up inteiramente visível — só nos casos em que
+      realmente estouraria; nos demais, `--popup-clamp-x` fica em 0px e o pop-up abre pra fora
+      normalmente.
+    */
+    --popup-clamp-x: 0px;
+    position: absolute;
+    width: max-content;
+    max-width: 14rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-top: 5px solid var(--color-accent);
+    padding: 0.7rem 0.9rem;
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+    text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(calc(var(--popup-tx) + var(--popup-clamp-x)), var(--popup-ty)) scale(var(--popup-scale));
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .mapa-times__popup-name {
+    font-size: var(--text-caption);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-primary-dark);
+    margin-bottom: 0.35rem;
+  }
+
+  /*
+    Bug real, achado ajustando as cores desta rodada: ".mapa-times__popup p" (classe + elemento,
+    especificidade 0,1,1) sempre vencia ".mapa-times__popup-name"/".mapa-times__popup-nota"
+    (0,1,0) mesmo essas vindo depois no arquivo — as duas sempre herdavam a cor do popup em vez
+    da própria cor declarada, silenciosamente, desde que essas classes existem. Corrigido
+    excluindo as duas dessa regra genérica com :not(), em vez de só confiar na ordem do arquivo.
+  */
+  .mapa-times__popup p:not(.mapa-times__popup-name):not(.mapa-times__popup-nota) {
+    max-width: none;
+    color: inherit;
+  }
+
+  .mapa-times__popup-nota {
+    margin-top: 0.4rem;
+    font-style: italic;
+    color: rgba(21, 42, 56, 0.75);
+  }
+
+  /*
+    Eixo vertical — CORRIGIDO: abre em direção ao CENTRO da tela (nunca em direção à borda),
+    pra nunca sumir da viewport. Bug real, achado ao vivo (não só medindo com o mapa parado): um
+    módulo já perto do topo do stage (pos='above') abria o pop-up ainda mais pra cima — como
+    esses módulos já ficam perto do topo da área visível (o `.mapa-times__sticky` fica colado
+    logo abaixo do cabeçalho), o pop-up saía por cima da viewport e ficava ilegível; o mesmo
+    valia pros módulos de baixo (pos='below'), que abriam ainda mais pra baixo e saíam por baixo
+    da área visível. Corrigido invertendo os dois: "above" agora abre pra BAIXO (em direção ao
+    centro do stage/tela), "below" agora abre pra CIMA (mesma lógica). "middle" (módulos na
+    altura do centro, só nas laterais) continua centralizado verticalmente em relação ao próprio
+    módulo — daí precisar de um `--popup-ty` constante (não muda entre fechado/aberto, só a
+    escala muda).
+  */
+  .mapa-times__node-wrap[data-pos='above'] .mapa-times__popup {
+    top: calc(100% + 0.6rem);
+  }
+
+  .mapa-times__node-wrap[data-pos='below'] .mapa-times__popup {
+    bottom: calc(100% + 0.6rem);
+  }
+
+  .mapa-times__node-wrap[data-pos='middle'] .mapa-times__popup {
+    top: 50%;
+    --popup-ty: -50%;
+  }
+
+  /*
+    Eixo horizontal — CORRIGIDO DE NOVO, sentido oposto ao da rodada anterior: a pedido explícito
+    ("as do lado abrem para dentro do número 363, gostaria que abrissem para fora"), os módulos
+    laterais agora abrem PRA FORA (em direção à borda da tela, se afastando do "363"), não mais
+    pra dentro. Um módulo à esquerda abre o pop-up ainda mais à esquerda; um à direita, ainda
+    mais à direita — o oposto exato da regra anterior (documentada abaixo por manter o histórico
+    do porquê essa direção já foi tentada e revertida uma vez).
+  */
+  .mapa-times__node-wrap[data-align='left'] .mapa-times__popup {
+    right: 0;
+  }
+
+  .mapa-times__node-wrap[data-align='right'] .mapa-times__popup {
+    left: 0;
+  }
+
+  .mapa-times__node-wrap[data-align='center'] .mapa-times__popup {
+    left: 50%;
+    --popup-tx: -50%;
+  }
+
+  /*
+    "middle" + esquerda/direita (operacional/financeiro, mesma altura do "363") são a única
+    exceção à regra "abre pra fora" — a pedido explícito ("operacional e financeiro podem abrir
+    pra dentro, pro box não precisar ficar comprido e dificultar a leitura em uma coluna"): abrir
+    pra fora aqui exigia um `max-width` bem mais estreito (só pra não estourar a borda lateral da
+    tela, que fica perto demais destes dois módulos), deixando o texto espremido numa coluna alta
+    e difícil de ler. Abrindo pra dentro, o pop-up ganha a largura normal (14rem, igual aos
+    outros 6) — o preço é passar por cima do "363", mas isso deixou de ser um problema depois do
+    fix de `z-index` acima: o pop-up agora SEMPRE pinta por cima do núcleo, então a leitura nunca
+    é prejudicada mesmo sobrepondo o numeral.
+  */
+  .mapa-times__node-wrap[data-pos='middle'][data-align='left'] .mapa-times__popup {
+    left: calc(100% + 0.6rem);
+    right: auto;
+  }
+
+  .mapa-times__node-wrap[data-pos='middle'][data-align='right'] .mapa-times__popup {
+    right: calc(100% + 0.6rem);
+    left: auto;
+  }
+
+  .mapa-times__node-wrap:hover .mapa-times__popup,
+  .mapa-times__node:focus-visible ~ .mapa-times__popup,
+  .mapa-times__node-wrap.is-open .mapa-times__popup {
+    --popup-scale: 1;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @media (max-width: 719px) {
+    /* No mobile o mapa usa quase toda a largura da tela — um módulo perto da borda não tem
+       espaço pra abrir um pop-up "pra dentro" (invade a área de proteção do 363) nem "pra fora"
+       (vaza da viewport) ao mesmo tempo. Em vez de espremer isso, os pop-ups por módulo somem
+       e dão lugar ao painel único abaixo. */
+    .mapa-times__popup {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mapa-times__popup {
+      transition: opacity 0.18s ease, visibility 0.18s;
+    }
+  }
+
+  /* ===== painel único do mobile — sempre na mesma posição segura dentro do stage ===== */
+  .mapa-times__mobile-panel {
+    display: none;
+  }
+
+  @media (max-width: 719px) {
+    .mapa-times__mobile-panel {
+      display: block;
+      position: absolute;
+      left: 0.75rem;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      /* Mesmo tratamento do pop-up do desktop nesta rodada — cartão branco/claro sobre o campo azul. */
+      background: var(--color-bg);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+      padding: 0.75rem 0.9rem;
+      font-size: var(--text-caption);
+      line-height: var(--leading-caption);
+      text-align: left;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(6px);
+      transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .mapa-times__mobile-panel.is-visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    /* Mesmo bug de especificidade do popup do desktop, mesma correção via :not(). */
+    .mapa-times__mobile-panel p:not(.mapa-times__popup-name):not(.mapa-times__popup-nota) {
+      max-width: none;
+      color: inherit;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .mapa-times__mobile-panel {
+        transition: opacity 0.18s ease, visibility 0.18s;
+      }
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-mapa-times]').forEach((root) => {
+    const motionAllowed = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+    const stage = root.querySelector<HTMLElement>('[data-mapa-stage]');
+    const wraps = Array.from(root.querySelectorAll<HTMLElement>('[data-node-wrap]'));
+    const lines = Array.from(root.querySelectorAll<SVGLineElement>('[data-line], [data-line-m]'));
+    const countEl = root.querySelector<HTMLElement>('[data-mapa-count]');
+    const panel = root.querySelector<HTMLElement>('[data-mapa-panel]');
+    const panelName = panel?.querySelector<HTMLElement>('[data-panel-name]');
+    const panelText = panel?.querySelector<HTMLElement>('[data-panel-text]');
+    const panelNota = panel?.querySelector<HTMLElement>('[data-panel-nota]');
+    if (!stage) return;
+
+    // ---- contagem do número central + entrada escalonada dos módulos, uma vez, quando o
+    // mapa entra na tela. ----
+    function reveal() {
+      stage!.classList.add('is-revealed');
+      const target = Number(countEl?.dataset.target ?? '0');
+      if (!countEl || !target) return;
+      if (!motionAllowed) {
+        countEl.textContent = String(target);
+        return;
+      }
+      const start = performance.now();
+      const duration = 900;
+      function step(now: number) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        countEl!.textContent = String(Math.round(eased * target));
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            reveal();
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.4 },
+    );
+    io.observe(stage);
+
+    // ---- pop-up abre "pra fora" por padrão (ver CSS), mas nunca pode ultrapassar a borda da
+    // tela — mede a posição real no momento de abrir e aplica o menor empurrão horizontal
+    // necessário pra trazer de volta pra dentro da viewport, só quando realmente precisa. ----
+    const desktopQuery = window.matchMedia('(min-width: 720px)');
+    function clampPopup(wrap: HTMLElement) {
+      if (!desktopQuery.matches) return;
+      const popup = wrap.querySelector<HTMLElement>('.mapa-times__popup');
+      if (!popup) return;
+      const margin = 12;
+      /*
+        Bug real, achado medindo geometria de verdade (não só olhando o resultado): o `transform`
+        deste pop-up tem `transition`, então zerar `--popup-clamp-x` pra medir a posição "natural"
+        (sem correção) não reflete instantaneamente — o navegador começa a ANIMAR até esse valor,
+        e `getBoundingClientRect()` logo em seguida captura um estado ainda em trânsito (não a
+        posição final), fazendo o cálculo do empurrão sair errado (confirmado: o valor de
+        `--popup-clamp-x` aplicado não batia com a posição realmente renderizada 250ms depois).
+        Desligar a transição, medir, e religar antes de aplicar o valor real evita isso — a
+        correção final ainda entra animada (junto da mesma transição de abertura), só a MEDIÇÃO
+        é instantânea.
+      */
+      popup.style.transition = 'none';
+      popup.style.setProperty('--popup-clamp-x', '0px');
+      const rect = popup.getBoundingClientRect();
+      let shift = 0;
+      if (rect.left < margin) shift = margin - rect.left;
+      else if (rect.right > window.innerWidth - margin) shift = window.innerWidth - margin - rect.right;
+      if (shift !== 0) popup.style.setProperty('--popup-clamp-x', `${shift}px`);
+      // Aplica o valor final ANTES de religar a transição — o clamp entra pronto, sem animar por
+      // conta própria (só opacidade/escala continuam animando normalmente ao abrir).
+      void popup.offsetHeight;
+      popup.style.transition = '';
+    }
+
+    // ---- interação dos módulos: hover/foco abre no desktop, toque abre/fecha no mobile,
+    // clique fora ou Esc fecha — mesmo padrão já estabelecido em AtuacaoMap.astro. ----
+    function openNode(id: string) {
+      stage!.classList.add('has-active');
+      let activeWrap: HTMLElement | null = null;
+      wraps.forEach((w) => {
+        const active = w.dataset.id === id;
+        if (active) activeWrap = w;
+        w.classList.toggle('is-dimmed', !active);
+        w.querySelector('[data-node]')?.setAttribute('aria-expanded', String(active));
+      });
+      lines.forEach((l) => l.classList.toggle('is-visible', l.dataset.target === id));
+      if (activeWrap) clampPopup(activeWrap);
+
+      // Painel único do mobile: copia o mesmo texto que já está no pop-up (desktop) daquele
+      // módulo, em vez de duplicar o conteúdo numa segunda fonte de dados.
+      if (panel && activeWrap) {
+        const name = activeWrap.querySelector<HTMLElement>('.mapa-times__popup-name');
+        const text = activeWrap.querySelector<HTMLElement>('.mapa-times__popup > p:not(.mapa-times__popup-name):not(.mapa-times__popup-nota)');
+        const nota = activeWrap.querySelector<HTMLElement>('.mapa-times__popup-nota');
+        if (panelName) panelName.textContent = name?.textContent ?? '';
+        if (panelText) panelText.textContent = text?.textContent ?? '';
+        if (panelNota) {
+          panelNota.hidden = !nota;
+          panelNota.textContent = nota?.textContent ?? '';
+        }
+        panel.classList.add('is-visible');
+      }
+    }
+
+    function closeAll() {
+      stage!.classList.remove('has-active');
+      wraps.forEach((w) => {
+        w.classList.remove('is-open', 'is-dimmed');
+        w.querySelector('[data-node]')?.setAttribute('aria-expanded', 'false');
+      });
+      lines.forEach((l) => l.classList.remove('is-visible'));
+      panel?.classList.remove('is-visible');
+    }
+
+    wraps.forEach((wrap) => {
+      const button = wrap.querySelector<HTMLButtonElement>('[data-node]');
+      if (!button) return;
+      wrap.addEventListener('mouseenter', () => openNode(wrap.dataset.id!));
+      wrap.addEventListener('mouseleave', closeAll);
+      button.addEventListener('focus', () => openNode(wrap.dataset.id!));
+      button.addEventListener('blur', closeAll);
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        wrap.classList.add('is-open');
+        openNode(wrap.dataset.id!);
+      });
+    });
+
+    document.addEventListener('click', closeAll);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeAll();
+    });
+  });
+</script>

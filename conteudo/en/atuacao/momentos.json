@@ -1,0 +1,34 @@
+{
+  "momentos": [
+    {
+      "id": "selecao",
+      "nome": "Selection",
+      "texto": "Twice a year, young people from the interior of the whole country take part in the national selection. Those who get in become role models in their own city.",
+      "textoCurto": "Selection of young leaders across the whole country."
+    },
+    {
+      "id": "formacao",
+      "nome": "Training",
+      "texto": "Three months of preparation with our team: lesson plans, the reality of public schools and impact assessment.",
+      "textoCurto": "Training young people to run the intervention in the public school of their community."
+    },
+    {
+      "id": "sala-de-aula",
+      "nome": "Classroom",
+      "texto": "Each Regional Director brings the Journey to a public school in their region and follows the same class for 6 months.",
+      "textoCurto": "The trained Regional Director runs the activities at the school."
+    },
+    {
+      "id": "impacto-medido",
+      "nome": "Measured impact",
+      "texto": "We measure each class before and after the Journey. Each school receives a results report, and the Journey gets an improvement plan for the next cycle.",
+      "textoCurto": "We run impact assessments before and after the Journey, and the school receives a final report."
+    },
+    {
+      "id": "nova-geracao",
+      "nome": "New generation",
+      "texto": "Students who went through the Journey come back as volunteers and Regional Directors. Each generation trains the next.",
+      "textoCurto": "Students who went through the Journey come back as volunteers."
+    }
+  ]
+}

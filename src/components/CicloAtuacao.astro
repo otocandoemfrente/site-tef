@@ -1,0 +1,377 @@
+---
+interface Momento {
+  id: string;
+  nome: string;
+  texto: string;
+}
+
+interface Props {
+  momentos: Momento[];
+  /** Sobre foto/fundo escuro (ex.: prévia da Home) — textos claros, avião sem o filtro que o
+      escurece pra ler sobre fundo claro (o asset original já é branco). */
+  dark?: boolean;
+}
+
+const { momentos, dark = false } = Astro.props;
+const n = momentos.length; // 5 — mesmas etapas da versão expandida da Atuação
+
+const box = 340;
+const cx = box / 2;
+const cy = box / 2;
+const ringR = 112;
+
+function polar(r: number, deg: number) {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+const marks = momentos.map((m, i) => ({ ...m, index: i, ...polar(ringR, (360 / n) * i) }));
+
+function describeQuarter(fromIdx: number) {
+  const a0 = (360 / n) * fromIdx;
+  const a1 = a0 + 360 / n;
+  const p0 = polar(ringR, a0);
+  const p1 = polar(ringR, a1);
+  return `M ${p0.x} ${p0.y} A ${ringR} ${ringR} 0 0 1 ${p1.x} ${p1.y}`;
+}
+const segments = momentos.map((_, i) => describeQuarter(i));
+
+const planeStart = polar(ringR, 0);
+---
+
+<div
+  class:list={['ciclo', { 'ciclo--dark': dark }]}
+  data-ciclo
+  data-dark={dark ? 'true' : undefined}
+  data-momentos={JSON.stringify(momentos.map(({ nome, texto }) => ({ nome, texto })))}
+  style={`--n:${n}`}
+>
+  <div class="ciclo__layout">
+    <div class="ciclo__frame" data-ciclo-frame>
+      <svg viewBox={`0 0 ${box} ${box}`} width="100%" height="100%" role="img" aria-label={`Ciclo contínuo do modelo de atuação do Tocando em Frente: ${momentos.map((m) => m.nome).join(', ')}, retornando ao início.`}>
+        {
+          segments.map((d, i) => (
+            <path class="ciclo__segment" data-segment data-index={i} d={d} fill="none" pathLength="1" style={`--mc: var(--m${i})`} />
+          ))
+        }
+
+        {
+          marks.map((m) => (
+            <g class="ciclo__mark" data-mark data-index={m.index} transform={`translate(${m.x} ${m.y})`} style={`--mc: var(--m${m.index})`}>
+              <circle class="ciclo__mark-halo" r="3" />
+              <circle class="ciclo__mark-dot" r="3.2" />
+            </g>
+          ))
+        }
+      </svg>
+
+      <div class="ciclo__plane" data-ciclo-plane style={`left:${(planeStart.x / box) * 100}%; top:${(planeStart.y / box) * 100}%;`}>
+        <span class="ciclo__ball"></span>
+      </div>
+    </div>
+
+    <div class="ciclo__content">
+      <div class="ciclo__content-body" data-ciclo-body>
+        <h3 data-ciclo-name>{momentos[0].nome}</h3>
+        <p data-ciclo-text>{momentos[0].texto}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .ciclo {
+    /* Mesma paleta derivada da versão expandida — nunca uma cor nova, só reaproveitada aqui. */
+    --m0: var(--color-primary);
+    --m1: color-mix(in srgb, var(--color-primary) 50%, var(--color-success) 50%);
+    --m2: var(--color-success);
+    --m3: color-mix(in srgb, var(--color-accent) 40%, var(--color-text) 60%);
+    --m4: color-mix(in srgb, var(--color-primary) 70%, var(--color-text) 30%);
+    position: relative;
+  }
+
+  .ciclo__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 2rem;
+  }
+
+  @media (min-width: 720px) {
+    .ciclo__layout {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: clamp(2rem, 1rem + 4vw, 4rem);
+    }
+  }
+
+  .ciclo__frame {
+    position: relative;
+    width: 100%;
+    max-width: 23rem;
+    margin-inline: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  /* Segunda rodada — círculo maior na variante escura, pedido explícito de reduzir o espaço
+     vazio: 23rem deixava bastante margem sobrando na coluna, sobretudo numa seção agora tão
+     grande quanto o hero. */
+  .ciclo--dark .ciclo__frame {
+    max-width: 30rem;
+  }
+
+  /* ===== trajetória — mesmo tratamento da versão expandida: nasce do movimento do avião, não
+     um círculo pronto. Na mini ela se desenha uma vez, na primeira volta, e depois fica
+     completa — só o avião continua indo de ponto a ponto sozinho. ===== */
+  .ciclo__segment {
+    stroke: var(--mc);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    opacity: 0.85;
+  }
+
+  .ciclo__mark {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: opacity 0.4s ease;
+  }
+
+  .ciclo__mark.is-revealed {
+    opacity: 1;
+  }
+
+  .ciclo__mark-dot {
+    fill: var(--color-bg);
+    stroke: var(--color-text-secondary);
+    stroke-width: 1.3;
+    transition: stroke 0.25s ease, fill 0.25s ease, r 0.25s ease;
+  }
+
+  .ciclo__mark-halo {
+    fill: var(--mc);
+    opacity: 0;
+    transition: opacity 0.3s ease, r 0.5s ease;
+  }
+
+  .ciclo__mark.is-active .ciclo__mark-dot {
+    fill: var(--mc);
+    stroke: var(--mc);
+    r: 5;
+  }
+
+  .ciclo__mark.is-active .ciclo__mark-halo {
+    opacity: 0.18;
+    r: 13;
+  }
+
+  /*
+    Segunda rodada — círculo (traço + marcas) inteiramente branco na variante escura, a pedido
+    explícito ("a circunferência... deve ser branca para contrastar com o fundo"). Isso substitui
+    de vez a progressão de cor por etapa (--m0..--m3) que a versão clara usa — nesta variante o
+    contraste forte importa mais que a diferenciação cromática entre etapas (que ainda existe no
+    texto do nome, só não mais no traço do SVG).
+  */
+  .ciclo--dark .ciclo__segment {
+    stroke: var(--color-bg);
+    /* Terceira rodada — a opacidade genérica de 0.85 (pensada pro traço colorido da versão
+       clara) esmaecia o branco aqui, contra pedido explícito de ficar "claramente branco". */
+    opacity: 1;
+  }
+
+  .ciclo--dark .ciclo__mark-halo {
+    fill: var(--color-bg);
+  }
+
+  .ciclo--dark .ciclo__mark.is-active .ciclo__mark-dot {
+    fill: var(--color-bg);
+    stroke: var(--color-bg);
+  }
+
+  /* ===== bolinha — vai de ponto a ponto sozinha, sem precisar de scroll (antes era o avião) ===== */
+  .ciclo__plane {
+    position: absolute;
+    width: 6%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+  }
+
+  .ciclo__ball {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%; /* círculo de verdade: exceção pontual, o próprio objeto é uma bolinha */
+    background: var(--active-color, var(--m0));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--active-color, var(--m0)) 22%, transparent);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* Variante escura (sobre foto): bolinha branca sólida, igual ao traço e às marcas. */
+  .ciclo--dark .ciclo__ball {
+    background: var(--color-bg);
+    box-shadow: 0 0 0 4px rgba(250, 248, 244, 0.25);
+  }
+
+  /* Terceira rodada — era rgba(...,0.6): também lia como esmaecido contra o pedido de branco
+     puro, agora sólido igual ao resto do traço/marcas nesta variante. */
+  .ciclo--dark .ciclo__mark-dot {
+    stroke: var(--color-bg);
+  }
+
+  /* ===== conteúdo da etapa ativa — mesmo padrão da expandida: sem numeral, sem ícone ===== */
+  .ciclo__content-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .ciclo__content-body.is-swapping {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ciclo__content-body {
+      transition: none;
+    }
+  }
+
+  .ciclo__content-body h3 {
+    font-size: var(--text-h2);
+    color: var(--active-color, var(--color-text));
+    transition: color 0.3s ease;
+  }
+
+  /*
+    Mesma propriedade (--active-color), fallback diferente: antes do JS rodar (ou com JS
+    desabilitado), o texto cairia no fallback de --color-text (escuro), ilegível sobre a foto.
+    Especificidade mais alta que a regra acima garante que este fallback vence só na variante
+    escura — depois que o JS roda, ele já sobrescreve --active-color direto (inline), então essa
+    regra só importa nesse instante inicial.
+  */
+  .ciclo--dark .ciclo__content-body h3 {
+    color: var(--active-color, var(--color-bg));
+  }
+
+  .ciclo__content-body p {
+    color: var(--color-text-secondary);
+    max-width: none;
+  }
+
+  .ciclo--dark .ciclo__content-body p {
+    color: rgba(250, 248, 244, 0.85);
+  }
+</style>
+
+<script>
+  const motionAllowed = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+
+  function polar(cx: number, cy: number, r: number, deg: number) {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function clamp(v: number, lo: number, hi: number) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  // O avião nunca para — pedido explícito ("precisa sempre circulando, senão parece que a tela
+  // travou"). Em vez de pousar em cada ponto, ele desliza em movimento contínuo, mas devagar o
+  // bastante pra cada etapa ficar pelo menos ~5s em destaque (QUARTER_MS) antes de passar pra
+  // próxima — mesmo requisito de antes ("pelo menos 5 segundos em cada um dos quatro pontos"),
+  // só que satisfeito pelo ritmo do giro, não por uma parada.
+  const QUARTER_MS = 5500;
+
+  document.querySelectorAll<HTMLElement>('[data-ciclo]').forEach((root) => {
+    const box = 340;
+    const cx = box / 2, cy = box / 2;
+    const ringR = 112;
+
+    const momentos: { nome: string; texto: string }[] = JSON.parse(root.dataset.momentos ?? '[]');
+    const n = momentos.length;
+
+    const plane = root.querySelector<HTMLElement>('[data-ciclo-plane]');
+    const marks = Array.from(root.querySelectorAll<SVGGElement>('[data-mark]'));
+    const segmentsEls = Array.from(root.querySelectorAll<SVGPathElement>('[data-segment]'));
+    const nameEl = root.querySelector<HTMLElement>('[data-ciclo-name]');
+    const textEl = root.querySelector<HTMLElement>('[data-ciclo-text]');
+    const bodyEl = root.querySelector<HTMLElement>('[data-ciclo-body]');
+    // Sobre foto (ver prop `dark`), o nome da etapa ativa fica sempre branco — a variação
+    // azul/verde/dourado por etapa (--m0..--m3) lê bem sobre --color-bg, mas o azul (--m0) some
+    // contra o véu azul-escuro da foto. Só o texto muda; os pontos/arcos do SVG continuam
+    // coloridos por etapa normalmente (usam --mc, não --active-color).
+    const dark = root.dataset.dark === 'true';
+
+    function updatePlane(angleT: number) {
+      const angleDeg = angleT * 360;
+      const p = polar(cx, cy, ringR, angleDeg);
+      if (!plane) return;
+      plane.style.left = `${(p.x / box) * 100}%`;
+      plane.style.top = `${(p.y / box) * 100}%`;
+    }
+
+    let swapTimer: ReturnType<typeof setTimeout> | undefined;
+    function setActive(i: number) {
+      marks.forEach((m, idx) => {
+        if (idx === i) m.classList.add('is-revealed');
+        m.classList.toggle('is-active', idx === i);
+      });
+      root.style.setProperty('--active-color', dark ? 'var(--color-bg)' : `var(--m${i})`);
+
+      if (!bodyEl || !motionAllowed) {
+        if (nameEl) nameEl.textContent = momentos[i].nome;
+        if (textEl) textEl.textContent = momentos[i].texto;
+        return;
+      }
+      clearTimeout(swapTimer);
+      bodyEl.classList.add('is-swapping');
+      swapTimer = setTimeout(() => {
+        if (nameEl) nameEl.textContent = momentos[i].nome;
+        if (textEl) textEl.textContent = momentos[i].texto;
+        bodyEl.classList.remove('is-swapping');
+      }, 180);
+    }
+
+    // Primeiro ponto já ativo e revelado antes de qualquer animação começar.
+    setActive(0);
+    updatePlane(0);
+
+    if (!motionAllowed) {
+      // Sem animação: mostra o ciclo já completo e quieto, com a primeira etapa ativa.
+      segmentsEls.forEach((seg) => (seg.style.strokeDashoffset = '0'));
+      marks.forEach((m) => m.classList.add('is-revealed'));
+      return;
+    }
+
+    const lapMs = n * QUARTER_MS;
+    let angleT = 0; // 0..1, gira sem parar
+    let drawLaps = 0; // cresce só na primeira volta e trava em 1 — a trilha se desenha uma vez e fica completa
+    let lastNow: number | null = null;
+    let activeIndex = 0;
+
+    function frame(now: number) {
+      const dt = lastNow === null ? 0 : Math.min(now - lastNow, 100); // cap evita salto brusco se o rAF ficou suspenso
+      lastNow = now;
+
+      angleT = (angleT + dt / lapMs) % 1;
+      if (drawLaps < 1) drawLaps = Math.min(1, drawLaps + dt / lapMs);
+      updatePlane(angleT);
+
+      const q = drawLaps * n;
+      segmentsEls.forEach((seg, i) => {
+        seg.style.strokeDashoffset = String(1 - clamp(q - i, 0, 1));
+      });
+
+      const i = Math.floor(angleT * n + 0.0001) % n;
+      if (i !== activeIndex) {
+        activeIndex = i;
+        setActive(activeIndex);
+      }
+
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+</script>

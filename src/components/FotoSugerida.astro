@@ -1,0 +1,56 @@
+---
+// Marca um lugar onde uma foto REAL ajudaria a humanizar a página (pedido da Isabella: "indique no projeto
+// onde encaixar fotos"). É só um espaço reservado, bem visível de propósito — pra achar todos de uma vez:
+// busque por "FotoSugerida" no projeto. Quando a foto existir, troque este componente por um <Image>.
+import MediaPlaceholder from './MediaPlaceholder.astro';
+
+interface Props {
+  /** O que fotografar — frase curta e concreta (quem, fazendo o quê, onde). */
+  label: string;
+  ratio?: string;
+  /** Legenda editorial que a foto poderia levar (nome + papel), se fizer sentido. */
+  legenda?: string;
+}
+
+const { label, ratio = '21 / 9', legenda } = Astro.props;
+---
+
+<figure class="foto-sugerida">
+  <p class="foto-sugerida__chip">Sugestão de foto</p>
+  <MediaPlaceholder label={label} ratio={ratio} />
+  {legenda && <figcaption class="caption">{legenda}</figcaption>}
+</figure>
+
+<style>
+  .foto-sugerida {
+    margin: clamp(2rem, 1.5rem + 2vw, 3.5rem) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .foto-sugerida__chip {
+    align-self: flex-start;
+    margin: 0;
+    padding: 0.2rem 0.6rem;
+    background: var(--color-accent);
+    color: var(--color-text);
+    /* Contorno escuro: a etiqueta também aparece sobre blocos amarelos, onde o fundo sozinho sumiria. */
+    outline: 1.5px solid var(--color-text);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .foto-sugerida :global(.media-placeholder) {
+    width: 100%;
+    height: auto;
+    outline: 2px dashed var(--color-accent);
+    outline-offset: -6px;
+  }
+
+  figcaption {
+    color: var(--color-text-secondary);
+  }
+</style>

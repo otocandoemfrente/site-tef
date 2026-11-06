@@ -1,0 +1,211 @@
+---
+import { localeFromUrl } from '../i18n/locale';
+
+interface RegiaoData {
+  id: string;
+  nome: string;
+  voluntarios: string[];
+}
+
+interface Props {
+  regioes: RegiaoData[];
+  atualizacaoTexto: string;
+}
+
+const { regioes, atualizacaoTexto } = Astro.props;
+const en = localeFromUrl(Astro.url) === 'en';
+
+/*
+  Zonas de hover por macrorregião — polígonos retos (sem curva, "reto/institucional") em cima
+  da mesma imagem-base do BrazilMap/AtuacaoMap, reescalados pro retângulo real do território
+  medido num <canvas> (left 2.78% / right 97.41% / top 12.15% / bottom 89.63%, ver CLAUDE.md).
+  A imagem não tem os estados como caminhos vetoriais separados (é um PNG raster embrulhado em
+  SVG), então não dá pra recortar cada região com precisão cartográfica — os polígonos abaixo são
+  uma aproximação de leitura das 5 macrorregiões, não um traçado oficial de fronteira.
+*/
+const ZONES: Record<string, string> = {
+  norte: '7.51% 13.70%, 59.56% 13.70%, 61.65% 27.65%, 57.67% 39.27%, 47.60% 50.89%, 30.17% 54.76%, 12.24% 47.02%, 5.62% 31.52%',
+  nordeste: '59.56% 13.70%, 95.51% 13.70%, 95.51% 35.39%, 87.94% 44.60%, 73.75% 46.92%, 61.65% 39.27%, 57.67% 27.65%',
+  'centro-oeste': '30.17% 54.76%, 47.60% 50.89%, 61.65% 39.27%, 73.75% 46.92%, 67.13% 60.19%, 54.83% 66.39%, 38.14% 64.85%, 28.28% 58.64%',
+  sudeste: '73.75% 46.92%, 87.94% 44.60%, 89.84% 62.51%, 76.59% 74.13%, 61.65% 70.26%, 54.83% 66.39%, 67.13% 60.19%',
+  sul: '54.83% 66.39%, 61.65% 70.26%, 76.59% 74.13%, 70.91% 89.63%, 45.36% 89.63%, 38.14% 77.01%, 38.14% 64.85%',
+};
+
+const zoned = regioes.map((r) => ({ ...r, clip: ZONES[r.id] ?? '' }));
+---
+
+<div class="regioes-map">
+  <div class="regioes-map__frame" data-regioes-map aria-label={en ? 'Map of Brazil by region' : 'Mapa do Brasil por região'}>
+    <img src="/imagens/mapa-contato.svg" alt="" class="regioes-map__img" />
+    {
+      zoned.map((r) => (
+        <button
+          type="button"
+          class="regioes-map__zone"
+          style={`clip-path: polygon(${r.clip});`}
+          data-region-zone
+          data-region-id={r.id}
+          aria-describedby="regioes-map-info"
+        >
+          <span class="visually-hidden">{r.nome}</span>
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="regioes-map__info" id="regioes-map-info" aria-live="polite">
+    <p class="caption regioes-map__hint" data-regioes-hint>
+      {en ? 'Hover over or tap a region on the map to see the volunteers.' : 'Passe o cursor ou toque em uma região do mapa para ver os voluntários.'}
+    </p>
+    {
+      zoned.map((r) => (
+        <div class="regioes-map__panel" data-region-panel={r.id} hidden>
+          <h4>
+            {r.nome} <span class="regioes-map__count">· {r.voluntarios.length} {en ? 'volunteers' : 'voluntários'}</span>
+          </h4>
+          <ul class="regioes-map__names">
+            {r.voluntarios.map((nome) => <li>{nome}</li>)}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+</div>
+<p class="caption regioes-map__update">{atualizacaoTexto}</p>
+
+<style>
+  .regioes-map {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .regioes-map__frame {
+    position: relative;
+    width: 100%;
+    max-width: 22rem;
+    margin-inline: auto;
+    aspect-ratio: 810 / 1012.5;
+  }
+
+  .regioes-map__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .regioes-map__zone {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .regioes-map__zone:hover,
+  .regioes-map__zone:focus-visible,
+  .regioes-map__zone.is-active {
+    opacity: 1;
+  }
+
+  .regioes-map__info {
+    border: 1px solid var(--color-border);
+    padding: 1.5rem;
+    min-height: 8rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .regioes-map__hint {
+    color: var(--color-text-secondary);
+  }
+
+  .regioes-map__panel h4 {
+    margin-bottom: 0.5rem;
+  }
+
+  .regioes-map__count {
+    font-size: var(--text-caption);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  /* Lista de nomes em colunas: a região Sudeste passa de 50 nomes, então rola por dentro do painel. */
+  .regioes-map__names {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 22rem;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    font-size: var(--text-caption);
+    line-height: 1.5;
+  }
+
+  .regioes-map__names li {
+    padding-block: 0.1rem;
+  }
+
+  .regioes-map__update {
+    margin-top: 1rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+  }
+
+  @media (min-width: 720px) {
+    .regioes-map {
+      flex-direction: row;
+      align-items: stretch;
+      gap: 2rem;
+    }
+
+    .regioes-map__frame {
+      flex: 1 1 55%;
+      max-width: none;
+    }
+
+    .regioes-map__info {
+      flex: 1 1 45%;
+    }
+  }
+</style>
+
+<script>
+  // Passar o cursor, focar (teclado) ou tocar numa região atualiza o painel — nunca um tooltip
+  // flutuante em cima de um polígono irregular, que seria difícil de posicionar direito.
+  document.querySelectorAll<HTMLElement>('[data-regioes-map]').forEach((frame) => {
+    const wrap = frame.closest<HTMLElement>('.regioes-map');
+    if (!wrap) return;
+
+    const zones = Array.from(frame.querySelectorAll<HTMLButtonElement>('[data-region-zone]'));
+    const hint = wrap.querySelector<HTMLElement>('[data-regioes-hint]');
+    const panels = Array.from(wrap.querySelectorAll<HTMLElement>('[data-region-panel]'));
+
+    function show(id: string | undefined) {
+      if (!id) return;
+      if (hint) hint.hidden = true;
+      panels.forEach((p) => {
+        p.hidden = p.dataset.regionPanel !== id;
+      });
+      zones.forEach((z) => z.classList.toggle('is-active', z.dataset.regionId === id));
+    }
+
+    zones.forEach((zone) => {
+      const id = zone.dataset.regionId;
+      zone.addEventListener('mouseenter', () => show(id));
+      zone.addEventListener('focus', () => show(id));
+      zone.addEventListener('click', () => show(id));
+    });
+  });
+</script>

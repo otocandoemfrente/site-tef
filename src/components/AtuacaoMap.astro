@@ -1,0 +1,378 @@
+---
+import escolasData from '../../conteudo/escolas.json';
+
+interface Props {
+  legendaEscolas: string;
+  legendaDr: string;
+}
+
+const { legendaEscolas, legendaDr } = Astro.props;
+
+/*
+  Projeção de lat/lng real para porcentagem x/y sobre a imagem do mapa.
+  Extremos geográficos do Brasil (oeste/leste/norte/sul) reescalados para
+  a área de terra medida de verdade na imagem-base (escaneada num <canvas>
+  em pixels não-brancos: x de 2.78% a 97.41%, y de 12.15% a 89.63%) — mesma
+  técnica e mesma imagem-base do BrazilMap.astro da Home.
+*/
+/*
+  Limites REAIS do território (Serra do Divisor/AC a oeste, Ponta do Seixas/PB a leste, Monte Caburaí/RR ao norte,
+  Chuí/RS ao sul). A versão anterior arredondava pra -74/-34/5/-34 — o leste em -34 (e não -34,79) empurrava os
+  pontos do Nordeste e do litoral ~2% da largura pra dentro do mar. Conferido medindo os quatro extremos da própria
+  imagem num <canvas>: com estes limites caem a 1–2px (em 1000px) do ponto medido.
+*/
+const BRAZIL_BOUNDS = { lonMin: -73.99, lonMax: -34.79, latMax: 5.27, latMin: -33.75 };
+const IMAGE_BBOX = { left: 2.78, right: 97.41, top: 12.15, bottom: 89.63 };
+
+/*
+  Ajuste fino VISUAL (a pedido: "os pontos um pouquinho mais pra esquerda"): todos os pins deslocados 0,8 ponto
+  percentual da largura pra esquerda (~4,6px com o mapa a 575px) depois de projetar a coordenada. Em um só lugar
+  pra poder reverter/ajustar (valor em % da largura do mapa; negativo = esquerda).
+*/
+const PIN_X_OFFSET = -0.8;
+
+/*
+  Ajuste fino VISUAL por estado, em pontos percentuais do mapa (x = largura, y = altura; x positivo = direita,
+  y positivo = baixo): SC y +0,7 (~5px) e PI x +2,2 (~13px), a pedidos. Acrescente outras UFs aqui se precisar.
+*/
+const PIN_OFFSET_POR_UF: Record<string, { x?: number; y?: number }> = { SC: { y: 0.7 }, PI: { x: 2.2 } };
+
+function project(lat: number, lng: number) {
+  const lonPct = (lng - BRAZIL_BOUNDS.lonMin) / (BRAZIL_BOUNDS.lonMax - BRAZIL_BOUNDS.lonMin);
+  const latPct = (BRAZIL_BOUNDS.latMax - lat) / (BRAZIL_BOUNDS.latMax - BRAZIL_BOUNDS.latMin);
+  return {
+    x: IMAGE_BBOX.left + lonPct * (IMAGE_BBOX.right - IMAGE_BBOX.left) + PIN_X_OFFSET,
+    y: IMAGE_BBOX.top + latPct * (IMAGE_BBOX.bottom - IMAGE_BBOX.top),
+  };
+}
+
+interface Escola {
+  estado: string;
+  uf: string;
+  cidade: string;
+  lat: number;
+  lng: number;
+  escola: string;
+}
+
+const escolas = escolasData.escolas as Escola[];
+
+// Agrupa escolas por cidade (uma cidade pode ter mais de uma escola parceira).
+const cidadesMap = new Map<string, { uf: string; estado: string; cidade: string; escolas: string[]; x: number; y: number }>();
+for (const e of escolas) {
+  const key = `${e.uf}|${e.cidade}`;
+  if (!cidadesMap.has(key)) {
+    const { x, y } = project(e.lat, e.lng);
+    const off = PIN_OFFSET_POR_UF[e.uf] ?? {};
+    cidadesMap.set(key, { uf: e.uf, estado: e.estado, cidade: e.cidade, escolas: [], x: x + (off.x ?? 0), y: y + (off.y ?? 0) });
+  }
+  cidadesMap.get(key)!.escolas.push(e.escola);
+}
+const cidades = Array.from(cidadesMap.values());
+
+// Alinhamento do balão: perto da borda direita/esquerda do mapa, um balão
+// centralizado no pin vaza pra fora do frame (e da tela, no mobile). Com
+// coordenadas reais, vários municípios do litoral Nordeste ficam entre
+// 80–94% da largura — então a partir daqui o balão "abre" para dentro do
+// mapa em vez de ficar sempre centralizado.
+function edgeAlign(x: number) {
+  if (x < 20) return 'left';
+  if (x > 78) return 'right';
+  return 'center';
+}
+---
+
+<div class="atuacao-map">
+  <div class="atuacao-map__titulo"><slot name="titulo" /></div>
+
+  <div class="atuacao-map__frame" data-atuacao-map>
+    <img src="/imagens/mapa-brasil.svg" alt="" class="atuacao-map__img" />
+
+    {
+      cidades.map((c, i) => {
+        const tooltipId = `atuacao-map-tip-${i}`;
+        const align = edgeAlign(c.x);
+        return (
+          <div class={`atuacao-map__pin-wrap atuacao-map__pin-wrap--${align}`} style={`left:${c.x}%; top:${c.y}%;`}>
+            <button type="button" class="atuacao-map__pin" aria-expanded="false" aria-describedby={tooltipId} data-pin>
+              <span class="visually-hidden">
+                {c.cidade}, {c.estado} — {c.escolas.join(' · ')}
+              </span>
+            </button>
+            <span class="atuacao-map__tooltip" id={tooltipId} role="tooltip">
+              <strong>
+                {c.cidade} — {c.uf}
+              </strong>
+              {c.escolas.map((esc) => (
+                <span class="atuacao-map__tooltip-school">{esc}</span>
+              ))}
+            </span>
+          </div>
+        );
+      })
+    }
+  </div>
+
+  <ul class="atuacao-map__legend">
+    <li><span class="atuacao-map__swatch atuacao-map__swatch--pin" aria-hidden="true" /> {legendaEscolas}</li>
+    <li><span class="atuacao-map__swatch atuacao-map__swatch--state" aria-hidden="true" /> {legendaDr}</li>
+  </ul>
+</div>
+
+<style>
+  /*
+    "Onde estamos" (a pedido): título grande + descrição da legenda à ESQUERDA e o mapa, maior, à DIREITA.
+    Celular: título → mapa → legenda, empilhados. Desktop: duas colunas; o mapa ocupa as duas linhas da
+    direita e a legenda fica logo embaixo do título.
+  */
+  .atuacao-map {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'titulo'
+      'mapa'
+      'legenda';
+    gap: 1.5rem;
+  }
+
+  .atuacao-map__titulo {
+    grid-area: titulo;
+  }
+
+  @media (min-width: 860px) {
+    .atuacao-map {
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.45fr);
+      /* Linhas 1fr em cima e embaixo centralizam o bloco título + legenda na altura do mapa (antes ficava
+         tudo colado no topo e sobrava um vazio enorme embaixo, à esquerda). */
+      grid-template-rows: 1fr auto auto 1fr;
+      grid-template-areas:
+        '. mapa'
+        'titulo mapa'
+        'legenda mapa'
+        '. mapa';
+      column-gap: clamp(2rem, 1rem + 4vw, 5rem);
+      row-gap: 1.5rem;
+    }
+  }
+
+  .atuacao-map__frame {
+    grid-area: mapa;
+    position: relative;
+    /*
+      MAPA MAIOR (a pedido: "mapa maior"): sem o limite de altura que o encolhia pra caber inteiro na tela
+      (antes largura = min(44rem, 100%, (altura da tela − cabeçalho − 4rem) × 0,8), ~505px em 1024×768).
+      Agora ele ocupa a coluna da direita inteira (≈575px em 1024px, até 60rem em telas largas) e pode passar
+      um pouco da altura da tela — o mapa é o protagonista da seção. Encostado à direita da coluna.
+    */
+    width: min(60rem, 100%);
+    margin-inline: auto;
+    aspect-ratio: 810 / 1012.5;
+    /*
+      A imagem do mapa tem ~12% de margem branca em cima e ~10% embaixo (o território vai de y 12,15% a
+      89,63%): margens negativas "cortam" esse branco sem mexer nas coordenadas dos pins (que seguem em %
+      do próprio frame). Em % de margem a base é a LARGURA da coluna ≈ largura do frame; 12% de largura ≈
+      9,6% de altura.
+    */
+    margin-block: -12% -9%;
+  }
+
+  @media (min-width: 860px) {
+    .atuacao-map__frame {
+      margin-inline: auto 0;
+      align-self: start;
+    }
+  }
+
+  .atuacao-map__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .atuacao-map__pin-wrap {
+    position: absolute;
+    /*
+      Tamanho ZERO de propósito (bug real, "os pontos estão altos"): o botão é inline, então o contêiner ganhava
+      a altura de uma linha de texto (29px) e o translate(-50%, -50%) subia todos os pontos ~14,6px acima da
+      coordenada calculada. Com 0×0 o ponto fica exatamente em left/top. Medido: dy 0 (antes -14,6).
+    */
+    width: 0;
+    height: 0;
+    line-height: 0;
+    transform: translate(-50%, -50%);
+    /*
+      Bug real: sem z-index, todo pin-wrap empilha só pela ordem no DOM — um
+      pin mais tarde na lista sempre pintava por cima do balão de um pin
+      anterior, mesmo esse estando aberto. Sobe o z-index só de quem está
+      com o balão visível (hover/foco/aberto) pra ele sempre vencer.
+    */
+    z-index: 1;
+  }
+
+  .atuacao-map__pin-wrap:hover,
+  .atuacao-map__pin-wrap:focus-within,
+  .atuacao-map__pin-wrap.is-open {
+    z-index: 20;
+  }
+
+  /* Área de toque mínima 44x44 mesmo o ponto visível sendo bem menor. */
+  .atuacao-map__pin {
+    display: block;
+    position: relative;
+    width: 44px;
+    height: 44px;
+    margin: -22px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .atuacao-map__pin::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 9px;
+    height: 9px;
+    background: var(--color-primary);
+    border: 1px solid var(--color-bg);
+    transition: transform 0.15s ease, background-color 0.15s ease;
+  }
+
+  .atuacao-map__pin:hover::before,
+  .atuacao-map__pin:focus-visible::before,
+  .atuacao-map__pin-wrap.is-open .atuacao-map__pin::before {
+    background: var(--color-primary-dark);
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+
+  .atuacao-map__tooltip {
+    --tooltip-x: translateX(-50%);
+    position: absolute;
+    bottom: calc(100% + 0.9rem);
+    left: 50%;
+    transform: var(--tooltip-x) translateY(4px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 10rem;
+    max-width: 14rem;
+    background: var(--color-text);
+    color: var(--color-bg);
+    padding: 0.6rem 0.75rem;
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 2;
+  }
+
+  /*
+    Perto da borda do mapa, um balão centralizado no pin vaza pra fora do
+    frame. Nesses casos ele "abre" a partir do pin em vez de ficar
+    centralizado — a coordenada horizontal (left/right) muda, e --tooltip-x
+    zera a translação em X, mas a regra de hover/foco abaixo (que só mexe
+    em translateY) continua valendo do mesmo jeito pras três variantes.
+  */
+  .atuacao-map__pin-wrap--left .atuacao-map__tooltip {
+    --tooltip-x: translateX(0);
+    left: 0;
+  }
+
+  .atuacao-map__pin-wrap--right .atuacao-map__tooltip {
+    --tooltip-x: translateX(0);
+    left: auto;
+    right: 0;
+  }
+
+  .atuacao-map__tooltip strong {
+    color: var(--color-bg);
+  }
+
+  .atuacao-map__tooltip-school {
+    display: block;
+    color: rgba(250, 248, 244, 0.8);
+  }
+
+  .atuacao-map__pin-wrap:hover .atuacao-map__tooltip,
+  .atuacao-map__pin:focus-visible + .atuacao-map__tooltip,
+  .atuacao-map__pin-wrap.is-open .atuacao-map__tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: var(--tooltip-x) translateY(0);
+  }
+
+  /* Legenda à esquerda, logo embaixo do título, em tamanho de leitura (uma por linha). */
+  .atuacao-map__legend {
+    grid-area: legenda;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-self: start;
+    font-size: var(--text-body);
+    color: var(--color-text-secondary);
+  }
+
+  .atuacao-map__legend li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .atuacao-map__swatch {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    margin-top: 0.3em;
+  }
+
+  .atuacao-map__swatch--pin {
+    background: var(--color-primary);
+  }
+
+  .atuacao-map__swatch--state {
+    background: color-mix(in srgb, var(--color-primary) 32%, var(--color-bg));
+  }
+
+</style>
+
+<script>
+  // Toque no mobile abre/fecha o balão; clique fora fecha; hover/foco no desktop já cobre o mouse.
+  document.querySelectorAll<HTMLElement>('[data-atuacao-map]').forEach((frame) => {
+    const pins = Array.from(frame.querySelectorAll<HTMLButtonElement>('[data-pin]'));
+
+    function closeAll() {
+      pins.forEach((p) => {
+        p.setAttribute('aria-expanded', 'false');
+        p.closest('.atuacao-map__pin-wrap')?.classList.remove('is-open');
+      });
+    }
+
+    pins.forEach((pin) => {
+      pin.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const wrap = pin.closest('.atuacao-map__pin-wrap');
+        const isOpen = wrap?.classList.contains('is-open');
+        closeAll();
+        if (!isOpen) {
+          wrap?.classList.add('is-open');
+          pin.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    document.addEventListener('click', closeAll);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeAll();
+    });
+  });
+</script>

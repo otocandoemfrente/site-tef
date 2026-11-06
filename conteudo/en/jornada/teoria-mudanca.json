@@ -1,0 +1,117 @@
+{
+  "intro": {
+    "titulo": "An educational journey that widens references, builds skills and opens new paths.",
+    "texto": "Tocando em Frente starts from real challenges that limit the possibilities of many young people and responds with an educational Journey — curriculum, role-model stories and hands-on experiences — to widen perspectives, build skills and strengthen each student’s agency."
+  },
+  "centro": {
+    "titulo": "Theory of Change",
+    "texto": "Hover over any point of the circle to understand how each piece connects."
+  },
+  "categorias": [
+    {
+      "id": "desafios",
+      "nome": "Challenges",
+      "icone": "alerta",
+      "tituloCompleto": "Lack of role models and opportunities",
+      "termoOriginal": "Inspirational Vacuum",
+      "resumo": "The absence of role models, examples of success and concrete opportunities limits what many young people can imagine for their own future — and feeds a cycle that is hard to break alone.",
+      "itens": [
+        {
+          "id": "falta-interesse",
+          "titulo": "Lack of interest",
+          "rotulo": "Lack of interest",
+          "texto": "Without seeing a practical purpose in their studies, students disengage — one of the main reasons for school dropout in Brazil."
+        },
+        {
+          "id": "baixo-desempenho",
+          "titulo": "Low academic performance",
+          "rotulo": "Academic\nperformance",
+          "texto": "Low aspirations and expectations are reflected directly in grades and in staying in school."
+        },
+        {
+          "id": "evasao-escolar",
+          "titulo": "School dropout",
+          "rotulo": "School dropout",
+          "texto": "When school seems disconnected from the future, dropping out becomes a more likely path."
+        },
+        {
+          "id": "desigualdades",
+          "titulo": "Perpetuation of inequality",
+          "rotulo": "Inequality",
+          "texto": "Without access to role models and resources, the same socioeconomic inequalities repeat across generations."
+        },
+        {
+          "id": "ciclo-pobreza",
+          "titulo": "Perpetuation of the cycle of poverty",
+          "rotulo": "Cycle of\npoverty",
+          "texto": "Fewer educational opportunities today mean fewer chances to break out of poverty tomorrow."
+        }
+      ]
+    },
+    {
+      "id": "curriculo",
+      "nome": "Intervention",
+      "icone": "livro",
+      "resumo": "Tocando em Frente’s answer: a Journey that widens repertoire with a gamified curriculum and real stories from people who have already broken through these barriers.",
+      "itens": [
+        {
+          "id": "curriculo-habilidades",
+          "titulo": "Key-skills curriculum",
+          "rotulo": "Key skills",
+          "texto": "Gamified, active activities build socio-emotional skills and connect school content to real paths."
+        },
+        {
+          "id": "historias-referencia",
+          "titulo": "Role-model stories",
+          "rotulo": "Role-model\nstories",
+          "texto": "Young people with different talents and backgrounds show, in practice, that dreaming big is possible."
+        }
+      ]
+    },
+    {
+      "id": "mudancas",
+      "nome": "Changes",
+      "icone": "crescimento",
+      "resumo": "With more repertoire and references, students widen their perspectives and start to see — and pursue — more possibilities.",
+      "itens": [
+        {
+          "id": "melhora-desempenho",
+          "titulo": "Improved academic performance",
+          "rotulo": "Better performance",
+          "texto": "More clarity about their own future translates into more engagement and better school results."
+        },
+        {
+          "id": "oportunidades",
+          "titulo": "New opportunities accessed",
+          "rotulo": "New opportunities",
+          "texto": "Students come to know and pursue opportunities in different fields of knowledge."
+        }
+      ]
+    },
+    {
+      "id": "impacto",
+      "nome": "Impact",
+      "icone": "estrela",
+      "resumo": "In the medium and long term, this journey helps reduce school dropout and paves the way for the students themselves to become new role models.",
+      "itens": [
+        {
+          "id": "protagonismo",
+          "titulo": "Agency and new paths",
+          "rotulo": "New paths",
+          "texto": "Public-school youth in leadership positions — new role models for the next generation."
+        },
+        {
+          "id": "menos-evasao",
+          "titulo": "Less dropout, more staying in school",
+          "rotulo": "Staying in school",
+          "texto": "More engaged students have more reasons to stay in school."
+        }
+      ]
+    }
+  ],
+  "kumu": {
+    "texto": "Tocando em Frente’s full Theory of Change — with all the evidence and references behind this model — is available for anyone who wants to dig deeper.",
+    "cta": "Explore the Theory of Change",
+    "link": "https://kumu.io/AnaGranada/tocando-em-frente-teoria-da-mudanca#vacuo-inspiracional/falta-de-interesse"
+  }
+}

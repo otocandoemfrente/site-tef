@@ -1,0 +1,44 @@
+{
+  "times": [
+    {
+      "id": "gestao",
+      "nome": "Management",
+      "texto": "Makes the team happen from the inside. Takes care of internal events, engagement and the onboarding, development and offboarding of volunteers."
+    },
+    {
+      "id": "financeiro",
+      "nome": "Finance",
+      "texto": "Makes sure every resource generates impact. Organizes, tracks and manages the financial resources that sustain our initiatives."
+    },
+    {
+      "id": "operacional",
+      "nome": "Operations",
+      "texto": "Connects what we plan with what happens in practice. Supports and trains the Regional Directorates, and handles processes, contracts and paperwork with schools and education secretariats."
+    },
+    {
+      "id": "pedagogico",
+      "nome": "Pedagogy",
+      "texto": "Turns knowledge into transformative experiences. Creates, adapts and evaluates teaching materials and strategies to boost students’ learning."
+    },
+    {
+      "id": "comunicacao",
+      "nome": "Communications",
+      "texto": "Gives Tocando em Frente a voice, a face and reach. Takes care of our communication, identity and presence to connect TEF with more people."
+    },
+    {
+      "id": "trainees",
+      "nome": "Trainees",
+      "texto": "Always on the move. They rotate through different teams in cycles, get to know TEF as a whole and help wherever they are needed most."
+    },
+    {
+      "id": "talentos",
+      "nome": "Talent Directorate",
+      "texto": "Turns ideas into experiences for students. Creates the lesson plans of the six Talent Directorates: Arts & Journalism, Research & Olympiads, English & Exchange, Debates & UN Simulations, Programming & Robotics and Social Impact."
+    },
+    {
+      "id": "dr",
+      "nome": "Regional Directorate",
+      "texto": "It is how the project comes to life in schools. Volunteers trained in our curriculum who build partnerships with public schools, run the activities and make the project happen on the ground."
+    }
+  ]
+}

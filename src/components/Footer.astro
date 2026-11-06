@@ -1,0 +1,157 @@
+---
+import { Image } from 'astro:assets';
+import logoAzul from '../assets/images/logo-tocando-azul.png';
+import logoBranco from '../assets/images/logo-tocando-branco.png';
+import type { Locale } from '../i18n/nav';
+
+// Rodapé em 3 colunas — layout do protótipo aprovado v2. O bloco de dados
+// institucionais exigido no briefing (nome, CNPJ, cidade, e-mail, redes) segue
+// presente por inteiro, só reorganizado; nada do "conteúdo exato" foi removido.
+const year = new Date().getFullYear();
+
+interface Props {
+  /** Variante azul (fundo --color-primary-dark, texto claro, logo branca) — agora é o padrão do site (ver Layout.astro). */
+  azul?: boolean;
+  locale?: Locale;
+}
+const { azul = false, locale = 'pt' } = Astro.props;
+const en = locale === 'en';
+---
+
+<footer class={`site-footer${azul ? ' site-footer--azul' : ''}`}>
+  <div class="container site-footer__grid">
+    <div class="site-footer__col">
+      <Image src={azul ? logoBranco : logoAzul} alt="Tocando Em Frente" class="site-footer__logo" format="png" />
+      <p class="caption">{en ? 'A youth-led organization transforming the school experience in Brazilian middle school (Ensino Fundamental II).' : 'Organização liderada por jovens que transforma a experiência escolar no Ensino Fundamental II.'}</p>
+      <p class="caption site-footer__legal">{en ? 'Associação Tocando em Frente · CNPJ (Brazilian tax ID) 50.145.518/0001-91 · Goiânia, GO, Brazil' : 'Associação Tocando em Frente · CNPJ 50.145.518/0001-91 · Goiânia, GO'}</p>
+    </div>
+
+    <div class="site-footer__col">
+      <p class="site-footer__heading">{en ? 'Contact' : 'Contato'}</p>
+      <p class="caption">
+        <a href="mailto:doacao@tocandoemfrente.org">doacao@tocandoemfrente.org</a>
+      </p>
+    </div>
+
+    <div class="site-footer__col">
+      <p class="site-footer__heading">{en ? 'Social media' : 'Redes'}</p>
+      <p class="caption">
+        <a href="https://www.instagram.com/tocandoemfrenteorg/" target="_blank" rel="noopener noreferrer">Instagram</a>
+      </p>
+      <p class="caption">
+        <a href="https://www.tiktok.com/@tocandoemfrenteong" target="_blank" rel="noopener noreferrer">TikTok</a>
+      </p>
+      <p class="caption">
+        <a href="https://www.linkedin.com/company/tocando-em-frente/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="container">
+    <p class="caption site-footer__copyright">© {year} Tocando Em Frente</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--color-border);
+    margin-top: 4rem;
+    padding-block: 3rem 1.5rem;
+  }
+
+  .site-footer__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns), 1fr);
+    row-gap: 2rem;
+  }
+
+  .site-footer__col {
+    grid-column: span 12;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Divisor vertical entre as três colunas — só quando estão lado a lado. */
+  @media (min-width: 640px) {
+    .site-footer__grid {
+      column-gap: var(--grid-gap);
+    }
+
+    .site-footer__col {
+      grid-column: span 4;
+    }
+
+    .site-footer__col:not(:first-child) {
+      border-left: 1px solid var(--color-border);
+      padding-left: var(--grid-gap);
+    }
+  }
+
+  .site-footer__logo {
+    height: 3rem;
+    width: auto;
+    margin-bottom: 0.25rem;
+    /*
+      Bug real: .site-footer__col é flex-direction:column, e o align-items
+      padrão (stretch) força a imagem a ocupar a largura inteira da coluna,
+      ignorando a proporção natural mesmo com width:auto — a logo ficava
+      esticada horizontalmente. align-self:flex-start tira a imagem desse
+      esticamento e deixa a proporção real (altura 3rem) governar a largura.
+    */
+    align-self: flex-start;
+  }
+
+  .site-footer__heading {
+    text-transform: uppercase;
+    font-size: var(--text-caption);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-text);
+  }
+
+  .site-footer__legal {
+    margin-top: 0.25rem;
+  }
+
+  .site-footer__col a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+
+  .site-footer__col a:hover {
+    color: var(--color-primary);
+  }
+
+  /* Variante azul (só na Jornada): sem a folga branca de cima — o azul começa logo depois do conteúdo. */
+  .site-footer--azul {
+    margin-top: 0;
+    border-top: none;
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+  }
+
+  .site-footer--azul .caption,
+  .site-footer--azul .site-footer__col a {
+    color: rgba(250, 248, 244, 0.82);
+  }
+
+  .site-footer--azul .site-footer__heading {
+    color: var(--color-accent);
+  }
+
+  .site-footer--azul .site-footer__col a:hover {
+    color: var(--color-accent);
+  }
+
+  .site-footer--azul .site-footer__col:not(:first-child),
+  .site-footer--azul .site-footer__copyright {
+    border-color: rgba(250, 248, 244, 0.25);
+  }
+
+  .site-footer__copyright {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+</style>

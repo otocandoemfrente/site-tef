@@ -1,0 +1,873 @@
+---
+import type { Locale } from '../i18n/nav';
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import VoluntariosMap from '../components/VoluntariosMap.astro';
+import qrPixImage from '../assets/images/QR_code.jpg';
+import voluntariosImage from '../assets/images/voluntarios-time.jpg';
+import doacoesImage from '../assets/images/doacoes-estudantes.jpg';
+import { getContent } from '../i18n/content';
+
+// Idioma da página (pt | en): as rotas em src/pages/ e src/pages/en/ só passam esta prop.
+const locale: Locale = (Astro.props as { locale?: Locale }).locale ?? 'pt';
+const en = locale === 'en';
+const c = getContent(locale);
+const page = c.facaParte;
+const voluntariosRegiao = c.voluntarios;
+
+const { hero, doacao, voluntariado, contato } = page;
+
+// O título do hero: a última palavra ganha o destaque amarelo (não usa data-reveal-words,
+// que reescreveria o texto e apagaria o <span>).
+const tituloPalavras = (hero.title as string).split(' ');
+const tituloUltima = tituloPalavras.pop();
+const tituloInicio = tituloPalavras.join(' ');
+
+// Paleta da própria TEF (azul + o acento do site) — sem as cores das Diretorias, que cansavam aqui.
+const valores = doacao.valores as { valor: string; texto: string }[];
+
+---
+
+<Layout title={page.title} description={page.description} locale={locale}>
+  <!-- Hero: faixa azul cheia, título grande e três atalhos numerados -->
+  <section class="hero">
+    <div class="container hero__inner">
+      <h1 class="hero__title">
+        {tituloInicio}{' '}<span class="accent-text-on-dark">{tituloUltima}</span>
+      </h1>
+      <ul class="atalhos">
+        {
+          hero.atalhos.map((a: { label: string; href: string }, i: number) => (
+            <li>
+              <a class="atalho" href={a.href}>
+                <span class="atalho__num" aria-hidden="true">0{i + 1}</span>
+                <span class="atalho__label">{a.label}</span>
+                <span class="atalho__seta" aria-hidden="true">↓</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Doação -->
+  <section class="doacao" id="doacao" aria-labelledby="doacao-heading">
+    <div class="container">
+      <h2 id="doacao-heading" class="secao-titulo" data-reveal-words>{doacao.kicker}</h2>
+
+      <div class="pix-card" data-reveal-block>
+        <div class="pix-info">
+          <p class="caption pix-info__label">{en ? 'Pix key' : 'Chave Pix'}</p>
+          <p class="pix-info__valor">{doacao.pixChave}</p>
+          <p class="pix-info__titular">{doacao.pixTitular}</p>
+          <button type="button" class="btn btn-accent" data-copy-value={doacao.pixChave} data-copied={en ? 'Key copied!' : 'Chave copiada!'}>
+            {en ? 'Copy Pix key' : 'Copiar chave Pix'}
+          </button>
+          <p class="visually-hidden" role="status" aria-live="polite" data-copy-status></p>
+
+          <div class="doacao__cartao">
+            <p class="caption pix-info__label">{doacao.cartaoLabel}</p>
+            <a class="btn btn-accent" href={doacao.cartaoHref} target="_blank" rel="noopener noreferrer">{en ? 'Recurring donations →' : 'Doações recorrentes →'}</a>
+          </div>
+        </div>
+
+        <figure class="pix-qr">
+          <div class="pix-qr__frame">
+            <Image src={qrPixImage} alt={en ? 'Pix QR Code — Associação Tocando em Frente' : 'QR Code Pix — Associação Tocando em Frente'} class="pix-qr__image" width={280} />
+          </div>
+          <figcaption class="caption">{doacao.qrLegenda}</figcaption>
+        </figure>
+      </div>
+
+      <p class="doacao__texto">{doacao.texto}</p>
+      <p class="caption doacao__fiscal">{doacao.fiscalTexto}</p>
+
+      <figure class="doacao__foto" data-reveal-block>
+        <Image
+          src={doacoesImage}
+          alt={en ? 'Five uniformed students smiling and hugging behind a poster board with the word Science (Ciência) and drawings of a cloud, a light bulb and a rocket.' : 'Cinco estudantes de uniforme, sorrindo e abraçados atrás de um cartaz de cartolina com a palavra Ciência e desenhos de nuvem, lâmpada e foguete.'}
+          class="doacao__foto-img"
+          widths={[640, 960, 1280, 1600]}
+          sizes="(min-width: 1152px) 1100px, 94vw"
+        />
+      </figure>
+
+      <fieldset class="valores" data-valores>
+        <legend class="caption kicker kicker--muted doacao__valores-kicker">{doacao.valoresKicker}</legend>
+        <div class="valores-grid">
+          {
+            valores.map((v, i) => (
+              <label class="valor-card" data-reveal-block style={`transition-delay:${i * 60}ms`}>
+                <input type="radio" name="valor" value={v.valor} data-texto={v.texto} checked={i === 0} class="visually-hidden" />
+                <span class="valor-card__valor">{v.valor}</span>
+                <span class="valor-card__texto">{v.texto}</span>
+              </label>
+            ))
+          }
+        </div>
+        <div class="valor-resumo">
+          <p class="valor-resumo__texto" aria-live="polite">
+            {en ? 'With' : 'Com'} <strong data-resumo-valor>{valores[0].valor}</strong>: <span data-resumo-texto>{valores[0].texto}</span>
+          </p>
+          <div class="valor-resumo__acoes">
+            <button type="button" class="btn btn-dark" data-copy-value={doacao.pixChave} data-copied={en ? 'Key copied!' : 'Chave copiada!'}>{en ? 'Copy Pix key' : 'Copiar chave Pix'}</button>
+            <a class="btn btn-outline-dark" href={doacao.cartaoHref} target="_blank" rel="noopener noreferrer">{en ? 'Donate monthly →' : 'Doar todo mês →'}</a>
+          </div>
+          <p class="visually-hidden" role="status" aria-live="polite" data-copy-status></p>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+
+  <!-- Voluntariado: faixa azul cheia -->
+  <section class="voluntariado" id="voluntariado" aria-labelledby="voluntariado-heading">
+    <div class="container">
+      <h2 id="voluntariado-heading" class="secao-titulo secao-titulo--claro" data-reveal-words>{voluntariado.kicker}</h2>
+      <p class="voluntariado__intro">{voluntariado.intro}</p>
+      <div class="pre-inscricao" data-reveal-block>
+        <a class="btn" href={voluntariado.preInscricaoHref} target="_blank" rel="noopener noreferrer">{voluntariado.preInscricaoLabel} →</a>
+      </div>
+
+
+      <div class="voluntariado__grid">
+        <div class="voluntariado-block voluntariado-block--online" data-reveal-block>
+          <h3>{voluntariado.online.titulo}</h3>
+          <p>{voluntariado.online.texto}</p>
+          <ul class="chip-list">
+            {
+              voluntariado.online.times.map((t: string) => (
+                <li class="chip">
+                  {t}
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <div class="voluntariado-block voluntariado-block--presencial" data-reveal-block style="transition-delay:100ms">
+          <h3>{voluntariado.presencial.titulo}</h3>
+          <p>{voluntariado.presencial.texto}</p>
+        </div>
+      </div>
+
+      <figure class="voluntariado__foto" data-reveal-block>
+        <Image
+          src={voluntariosImage}
+          alt={en ? 'A group of ten people, young volunteers and adults, smiling side by side in front of a wall decorated with gears and the words Protagonismo (Agency), Projeto de vida (Life project) and Sucesso (Success).' : 'Grupo de dez pessoas, jovens voluntários e adultos, sorrindo lado a lado diante de uma parede decorada com engrenagens e as palavras Protagonismo, Projeto de vida e Sucesso.'}
+          class="voluntariado__foto-img"
+          widths={[640, 960, 1280, 1600]}
+          sizes="(min-width: 1152px) 1100px, 94vw"
+        />
+      </figure>
+    </div>
+  </section>
+
+  <!-- Contato -->
+  <section class="contato" id="contato" aria-labelledby="contato-heading">
+    <div class="container">
+      <h2 id="contato-heading" class="secao-titulo" data-reveal-words>{contato.kicker}</h2>
+      <div class="contato__grid">
+        <div class="contato__block contato__block--email" data-reveal-block>
+          <p class="caption">{en ? 'Email' : 'E-mail'}</p>
+          <a class="contato__email" href={`mailto:${contato.email}`}>{contato.email}</a>
+          <p class="caption">{contato.texto}</p>
+          <button type="button" class="btn btn-outline-light contato__copiar" data-copy-value={contato.email} data-copied={en ? 'Email copied!' : 'E-mail copiado!'}>{en ? 'Copy email' : 'Copiar e-mail'}</button>
+          <p class="visually-hidden" role="status" aria-live="polite" data-copy-status></p>
+        </div>
+
+        <div class="contato__block contato__block--redes" data-reveal-block style="transition-delay:100ms">
+          <p class="caption">{en ? 'Social media' : 'Redes sociais'}</p>
+          <ul class="contato__redes">
+            {
+              contato.redes.map((r: { rede: string; handle: string; href?: string }) =>
+                r.href ? (
+                  <li>
+                    <a class="btn btn-outline-dark contato__rede-btn" href={r.href} target="_blank" rel="noopener noreferrer">
+                      <span class="contato__rede-nome">{r.rede}</span>
+                      <span class="contato__rede-handle">{r.handle}</span>
+                      <span class="contato__rede-seta" aria-hidden="true">→</span>
+                    </a>
+                  </li>
+                ) : (
+                  <li>
+                    <span class="contato__rede-nome">{r.rede}</span> {r.handle}
+                  </li>
+                ),
+              )
+            }
+          </ul>
+        </div>
+      </div>
+
+      <div class="voluntarios-regiao">
+        <h2 class="secao-titulo" data-reveal-words>{contato.voluntariosKicker}</h2>
+        <VoluntariosMap regioes={voluntariosRegiao.regioes} atualizacaoTexto={voluntariosRegiao.atualizacaoTexto} />
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  section {
+    padding-block: clamp(3.5rem, 2.5rem + 4vw, 6.5rem);
+  }
+
+  /*
+    Título de seção (Doação / Voluntariado / Contato): grande, com um fio de 1px embaixo, pra ler como
+    abertura de seção (~60px em 1024px; títulos de seção da página, maiores que os da Jornada de propósito).
+  */
+  .secao-titulo {
+    margin: 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: clamp(2.25rem, 1.5rem + 3.5vw, 4.5rem);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-text);
+    max-width: none;
+  }
+
+  .secao-titulo--claro {
+    color: var(--color-bg);
+    border-bottom-color: rgba(250, 248, 244, 0.35);
+  }
+
+  /* Botões extras desta página (o resto vem de .btn em global.css). */
+  .btn-accent {
+    background: var(--color-accent);
+    color: var(--color-text);
+  }
+
+  .btn-accent:hover,
+  .btn-accent:focus-visible {
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .btn-outline-light {
+    background: transparent;
+    border-color: var(--color-bg);
+    color: var(--color-bg);
+  }
+
+  .btn-outline-light:hover,
+  .btn-outline-light:focus-visible {
+    background: var(--color-bg);
+    color: var(--color-primary-dark);
+  }
+
+  /* ===== Hero ===== */
+  .hero {
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+    padding-block: clamp(4rem, 3rem + 5vw, 8rem);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero__inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(2rem, 1.5rem + 2vw, 3rem);
+    align-items: end;
+  }
+
+  .hero__title {
+    color: var(--color-bg);
+    font-size: clamp(3rem, 2rem + 6vw, 7rem);
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    max-width: none;
+  }
+
+  .atalhos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid rgba(250, 248, 244, 0.35);
+  }
+
+  /* Três atalhos como linhas numeradas: a grade como elemento gráfico, e o amarelo-limão só no hover. */
+  .atalho {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 0.25rem;
+    border-bottom: 1px solid rgba(250, 248, 244, 0.35);
+    color: var(--color-bg);
+    font-size: var(--text-h3);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease, padding 0.2s ease;
+  }
+
+  .atalho__num {
+    font-size: var(--text-caption);
+    letter-spacing: 0.12em;
+    color: var(--color-accent);
+    transition: color 0.2s ease;
+  }
+
+  .atalho__seta {
+    font-size: 1.5rem;
+    line-height: 1;
+    transition: transform 0.2s ease;
+  }
+
+  .atalho:hover,
+  .atalho:focus-visible {
+    background: var(--color-accent);
+    color: var(--color-text);
+    padding-inline: 1rem;
+  }
+
+  .atalho:hover .atalho__num,
+  .atalho:focus-visible .atalho__num {
+    color: var(--color-text);
+  }
+
+  .atalho:hover .atalho__seta,
+  .atalho:focus-visible .atalho__seta {
+    transform: translateY(4px);
+  }
+
+  .atalho:focus-visible {
+    outline: 2px solid var(--color-bg);
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 860px) {
+    .hero__inner {
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      column-gap: var(--grid-gap);
+    }
+  }
+
+  /* ===== Doação ===== */
+  /* Cartão azul-escuro: chave Pix + QR lado a lado. */
+  .pix-card {
+    margin-top: clamp(2rem, 1.5rem + 2vw, 3rem);
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+    padding: clamp(1.5rem, 1rem + 2.5vw, 3rem);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .pix-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .pix-info__label {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: rgba(250, 248, 244, 0.8);
+  }
+
+  .pix-info__valor {
+    font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--color-accent);
+    overflow-wrap: anywhere;
+  }
+
+  .pix-info__titular {
+    font-size: var(--text-body);
+    font-weight: 500;
+    max-width: none;
+    color: var(--color-bg);
+  }
+
+  .pix-info .btn {
+    margin-top: 0.9rem;
+    width: fit-content;
+  }
+
+  .doacao__cartao {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(250, 248, 244, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .doacao__cartao .btn {
+    margin-top: 0.4rem;
+    width: fit-content;
+  }
+
+  .pix-qr {
+    margin: 0;
+    max-width: 13rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  /* QR real: fundo claro de sossego em volta do código (sem margem fica mais difícil de escanear). */
+  .pix-qr__frame {
+    background: var(--color-bg);
+    padding: 0.85rem;
+  }
+
+  .pix-qr__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  .pix-qr figcaption {
+    max-width: none;
+    color: rgba(250, 248, 244, 0.85);
+  }
+
+  @media (min-width: 720px) {
+    .pix-card {
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: clamp(2rem, 1rem + 4vw, 5rem);
+      align-items: center;
+    }
+
+    .pix-qr {
+      max-width: 15rem;
+    }
+  }
+
+  .doacao__fiscal {
+    margin-top: 0.75rem;
+    color: var(--color-text-secondary);
+    max-width: 40rem;
+  }
+
+  /* Vai até o fim da margem dos blocos (sem teto de largura), a pedido. */
+  .doacao__texto {
+    margin-top: clamp(2.5rem, 2rem + 2vw, 3.5rem);
+    max-width: none;
+  }
+
+  /*
+    Foto entre a chave Pix e os valores sugeridos. Moldura reta de 1px; o corte horizontal ancora no
+    topo da foto (0%) pra não cortar a cabeça do menino de trás; sobra corte só embaixo. height:auto explícito (senão o atributo height do <img> do
+    astro:assets vence o aspect-ratio).
+  */
+  .doacao__foto {
+    margin: clamp(2.5rem, 2rem + 2vw, 3.5rem) 0 0;
+  }
+
+  .doacao__foto-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center 0%;
+    border: 1px solid var(--color-border);
+  }
+
+  .valores {
+    border: 0;
+    margin: clamp(2.5rem, 2rem + 2vw, 3.5rem) 0 0;
+    padding: 0;
+    min-width: 0;
+  }
+
+  .doacao__valores-kicker {
+    padding: 0;
+    margin-bottom: 1rem;
+  }
+
+  /* Valores sugeridos: cartões selecionáveis (radio por baixo — teclado e leitor de tela funcionam). */
+  .valores-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--color-border);
+    border: 1px solid var(--color-border);
+  }
+
+  .valor-card {
+    position: relative;
+    background: var(--color-bg);
+    color: var(--color-text);
+    padding: 1.5rem 1.5rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .valor-card:hover {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg));
+  }
+
+  .valor-card:has(input:focus-visible) {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -4px;
+  }
+
+  .valor-card:has(input:checked) {
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+  }
+
+  .valor-card__valor {
+    font-size: clamp(2.5rem, 2rem + 2.5vw, 4rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--color-primary);
+    transition: color 0.2s ease;
+  }
+
+  .valor-card:has(input:checked) .valor-card__valor {
+    color: var(--color-accent);
+  }
+
+  .valor-card__texto {
+    color: inherit;
+  }
+
+  .valor-card:has(input:checked) .valor-card__texto {
+    color: rgba(250, 248, 244, 0.9);
+  }
+
+  /* Resumo do valor escolhido + ações. */
+  .valor-resumo {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-accent);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .valor-resumo__texto {
+    max-width: none;
+  }
+
+  .valor-resumo__acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 720px) {
+    .valor-resumo {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .valores-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1000px) {
+    .valores-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* ===== Voluntariado — faixa azul cheia ===== */
+  .voluntariado {
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+  }
+
+  .voluntariado__intro {
+    margin-top: 1rem;
+    font-size: var(--text-h3);
+    font-weight: 400;
+    color: rgba(250, 248, 244, 0.88);
+    max-width: none;
+  }
+
+  .voluntariado__grid {
+    margin-top: clamp(2.5rem, 2rem + 2vw, 3.5rem);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .voluntariado-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+    border: 1px solid rgba(250, 248, 244, 0.35);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .voluntariado-block:hover {
+    border-color: var(--color-accent);
+    background: rgba(250, 248, 244, 0.06);
+  }
+
+  .voluntariado-block h3 {
+    color: var(--color-accent);
+  }
+
+  .voluntariado-block p {
+    color: rgba(250, 248, 244, 0.92);
+    max-width: none;
+  }
+
+  .chip-list {
+    list-style: none;
+    margin: 0.35rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .chip {
+    border: 1px solid rgba(250, 248, 244, 0.6);
+    padding: 0.4rem 0.85rem;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    color: var(--color-bg);
+  }
+
+  @media (min-width: 720px) {
+    .voluntariado__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--grid-gap);
+    }
+  }
+
+  .pre-inscricao {
+    margin-top: clamp(2rem, 1.5rem + 2vw, 3rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .pre-inscricao .btn {
+    background: var(--color-accent);
+    color: var(--color-text);
+  }
+
+  .pre-inscricao .btn:hover,
+  .pre-inscricao .btn:focus-visible {
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  /* Foto do time de voluntários: moldura reta clara sobre o azul; o corte 16/9 fica no alto pra manter os rostos. */
+  .voluntariado__foto {
+    margin: clamp(2rem, 1.5rem + 2vw, 3rem) 0 0;
+  }
+
+  .voluntariado__foto-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center 28%;
+    border: 1px solid rgba(250, 248, 244, 0.35);
+  }
+
+  /* ===== Contato ===== */
+  .contato__grid {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .contato__block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    transition: border-color 0.2s ease;
+  }
+
+  .contato__block:hover {
+    border-color: var(--color-primary);
+  }
+
+  .contato__block--email {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+    color: var(--color-bg);
+  }
+
+  .contato__block .caption {
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    max-width: none;
+  }
+
+  .contato__block--email .caption {
+    color: rgba(250, 248, 244, 0.8);
+  }
+
+  .contato__block--email .caption:last-of-type {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+
+  .contato__block a:not(.btn) {
+    color: var(--color-primary);
+    font-weight: 700;
+    text-decoration-thickness: 2px;
+  }
+
+  .contato__block--email a:not(.btn) {
+    color: var(--color-accent);
+  }
+
+  .contato__block a:not(.btn):hover {
+    color: var(--color-primary-dark);
+  }
+
+  .contato__block--email a:not(.btn):hover {
+    color: var(--color-bg);
+  }
+
+  /* E-mail sempre numa linha só: a fonte acompanha a largura do próprio bloco (container query). */
+  .contato__block--email {
+    container-type: inline-size;
+  }
+
+  .contato__email {
+    font-size: clamp(0.8rem, 6.2cqi, 2.1rem);
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .contato__block .contato__copiar {
+    margin-top: 0.5rem;
+    width: fit-content;
+  }
+
+  /* Redes sociais como botões (a pedido): nome + @ + seta, um por linha, na largura do bloco. */
+  .contato__redes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .contato__rede-btn {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding-block: 0.85rem;
+  }
+
+  .contato__rede-nome {
+    font-weight: 700;
+  }
+
+  /* O @ mantém a caixa original (o .btn é maiúsculo) e quebra pra baixo se faltar largura. */
+  .contato__rede-handle {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .contato__rede-seta {
+    margin-left: auto;
+  }
+
+  @media (min-width: 720px) {
+    .contato__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--grid-gap);
+    }
+  }
+
+  /* Voluntários por região — mapa interativo, ver VoluntariosMap.astro. */
+  .voluntarios-regiao {
+    margin-top: clamp(3.5rem, 3rem + 3vw, 6rem);
+  }
+
+  .voluntarios-regiao :global(.regioes-map) {
+    margin-top: 1.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .atalho,
+    .atalho__seta,
+    .valor-card,
+    .voluntariado-block {
+      transition: none;
+    }
+
+    .atalho:hover .atalho__seta,
+    .atalho:focus-visible .atalho__seta {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  // Copiar (chave Pix, e-mail) pro clipboard — feedback textual no botão + aria-live, reset após 2s.
+  document.querySelectorAll<HTMLButtonElement>('[data-copy-value]').forEach((button) => {
+    const status = button.parentElement?.querySelector<HTMLElement>('[data-copy-status]');
+    const originalLabel = button.textContent ?? '';
+
+    button.addEventListener('click', async () => {
+      const value = button.dataset.copyValue ?? '';
+      const done = button.dataset.copied ?? 'Copiado!';
+      try {
+        await navigator.clipboard.writeText(value);
+        button.textContent = done;
+        if (status) status.textContent = done;
+      } catch {
+        const isEn = document.documentElement.lang.startsWith('en');
+        button.textContent = isEn ? 'Could not copy' : 'Não foi possível copiar';
+        if (status) status.textContent = isEn ? 'Could not copy automatically.' : 'Não foi possível copiar automaticamente.';
+      }
+      window.setTimeout(() => {
+        button.textContent = originalLabel;
+      }, 2000);
+    });
+  });
+
+  // Valores sugeridos: escolher um valor atualiza o resumo logo abaixo (o que ele paga).
+  document.querySelectorAll<HTMLElement>('[data-valores]').forEach((box) => {
+    const valor = box.querySelector<HTMLElement>('[data-resumo-valor]');
+    const texto = box.querySelector<HTMLElement>('[data-resumo-texto]');
+    box.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((radio) => {
+      radio.addEventListener('change', () => {
+        if (!radio.checked) return;
+        if (valor) valor.textContent = radio.value;
+        if (texto) texto.textContent = radio.dataset.texto ?? '';
+      });
+    });
+  });
+</script>

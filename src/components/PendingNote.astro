@@ -1,0 +1,69 @@
+---
+// Marca visível de dado pendente (nunca inventar o valor real) — ver
+// prompt-claude-code-site-tef.md, instrução final item 2. O rótulo "PENDENTE"
+// usa o bloco de acento da identidade visual (fundo --color-accent, texto
+// escuro por cima), o mesmo "marcador gráfico" descrito na seção de cores.
+interface Props {
+  text: string;
+  as?: 'p' | 'div' | 'span';
+  /** 'dark' = uso sobre fundo --color-primary-dark (ex.: seção da Jornada). */
+  variant?: 'light' | 'dark';
+  /** Sem moldura/preenchimento — só o chip (+ detalhe, se houver). Uso em célula de tabela ou lista densa. */
+  compact?: boolean;
+}
+
+const { text, as: Tag = 'p', variant = 'light', compact = false } = Astro.props;
+// Remove o wrapper "[PENDENTE: ...]" do texto do briefing, já que o rótulo é o chip.
+// Alguns itens do briefing são só "[PENDENTE]", sem ":" nem detalhe — sem esse caso a
+// regra abaixo devolvia um "[PENDENTE" com colchete sobrando, já que só a primeira regex
+// exige o ":". Aqui, bare vira string vazia (chip sozinho, sem segundo <span>).
+const isBare = /^\[PENDENTE\]$/i.test(text.trim());
+const content = isBare ? '' : text.replace(/^\[PENDENTE:\s*/i, '').replace(/\]$/, '');
+---
+
+<Tag class={`pending-note pending-note--${variant}${compact ? ' pending-note--compact' : ''}`}>
+  <span class="pending-note__tag">Pendente</span>
+  {content && <span>{content}</span>}
+</Tag>
+
+<style>
+  .pending-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    max-width: none;
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.85rem;
+  }
+
+  .pending-note--light {
+    color: var(--color-text-secondary);
+    border: 1px dashed var(--color-border);
+  }
+
+  .pending-note--dark {
+    color: #d7e2ea;
+    border: 1px dashed rgba(255, 255, 255, 0.35);
+  }
+
+  /* Sem moldura/preenchimento — só o chip (+ detalhe, se houver). Uso em célula de tabela ou lista densa. */
+  .pending-note--compact {
+    display: inline-flex;
+    border: none;
+    padding: 0;
+  }
+
+  .pending-note__tag {
+    flex: none;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.45rem;
+  }
+</style>

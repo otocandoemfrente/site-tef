@@ -1,0 +1,34 @@
+{
+  "momentos": [
+    {
+      "id": "selecao",
+      "nome": "Seleção",
+      "texto": "Duas vezes por ano, jovens do interior de todo o país participam da seletiva nacional. Quem entra vira referência na própria cidade.",
+      "textoCurto": "Seleção de jovens líderes no país inteiro."
+    },
+    {
+      "id": "formacao",
+      "nome": "Formação",
+      "texto": "Três meses de preparo com o nosso time: planos de aula, a realidade da escola pública e avaliação de impacto.",
+      "textoCurto": "Formação dos jovens para aplicar a intervenção na escola pública da sua comunidade."
+    },
+    {
+      "id": "sala-de-aula",
+      "nome": "Sala de aula",
+      "texto": "Cada Diretor Regional leva a Jornada a uma escola pública da sua região e acompanha a mesma turma por 6 meses.",
+      "textoCurto": "O Diretor Regional formado aplica as atividades na escola."
+    },
+    {
+      "id": "impacto-medido",
+      "nome": "Impacto mensurado",
+      "texto": "Medimos cada turma antes e depois da Jornada. Cada escola recebe um relatório de resultados, e a Jornada ganha um plano de melhoria para o próximo ciclo.",
+      "textoCurto": "Passamos avaliações de impacto pré e pós jornada e a escola recebe um relatório final."
+    },
+    {
+      "id": "nova-geracao",
+      "nome": "Nova geração",
+      "texto": "Estudantes que passaram pela Jornada voltam como voluntários e Diretores Regionais. Cada geração forma a próxima.",
+      "textoCurto": "Estudantes que passaram pela Jornada voltam como voluntários."
+    }
+  ]
+}

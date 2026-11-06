@@ -1,0 +1,44 @@
+{
+  "times": [
+    {
+      "id": "gestao",
+      "nome": "Gestão",
+      "texto": "Faz o time acontecer por dentro. Cuida dos eventos internos, do engajamento e dos processos de entrada, desenvolvimento e saída dos voluntários."
+    },
+    {
+      "id": "financeiro",
+      "nome": "Financeiro",
+      "texto": "Cuida para que cada recurso gere impacto. Organiza, acompanha e administra os recursos financeiros que sustentam nossas iniciativas."
+    },
+    {
+      "id": "operacional",
+      "nome": "Operacional",
+      "texto": "Conecta o que planejamos com o que acontece na prática. Acompanha e forma as Diretorias Regionais, além de cuidar dos processos, contratos e burocracias com as escolas e secretarias da educação."
+    },
+    {
+      "id": "pedagogico",
+      "nome": "Pedagógico",
+      "texto": "Transforma conhecimento em experiências transformadoras. Cria, adapta e avalia materiais e estratégias pedagógicas para potencializar o aprendizado dos alunos."
+    },
+    {
+      "id": "comunicacao",
+      "nome": "Comunicação",
+      "texto": "Dá voz, cara e alcance ao Tocando em Frente. Cuida da nossa comunicação, identidade e presença para conectar o TEF com mais pessoas."
+    },
+    {
+      "id": "trainees",
+      "nome": "Trainees",
+      "texto": "Sempre em movimento. Passam por diferentes times em ciclos, conhecem o TEF por inteiro e ajudam onde mais precisam."
+    },
+    {
+      "id": "talentos",
+      "nome": "Diretoria de Talentos",
+      "texto": "Transforma ideias em experiências para os alunos. Cria planos de aula das seis Diretorias de Talentos: Artes e Jornalismo, Pesquisa e Olimpíadas, Inglês e Intercâmbio, Debates e Simulações da ONU, Programação e Robótica e Impacto Social."
+    },
+    {
+      "id": "dr",
+      "nome": "Diretoria Regional",
+      "texto": "É como o projeto ganha vida nas escolas. Voluntários capacitados no nosso currículo que estabelecem parcerias com escolas públicas, aplicam as atividades e fazem o projeto acontecer na ponta."
+    }
+  ]
+}

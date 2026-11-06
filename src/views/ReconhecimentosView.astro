@@ -1,0 +1,611 @@
+---
+import type { Locale } from '../i18n/nav';
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import PendingNote from '../components/PendingNote.astro';
+import VideoPlayer from '../components/VideoPlayer.astro';
+import theWallImage from '../assets/images/the-wall-equipe.jpg';
+import premioLedImage from '../assets/images/premio-led-equipe.jpg';
+import watsonImage from '../assets/images/watson-summit-slide.png';
+import onuImage from '../assets/images/onu-discurso.png';
+import { getContent } from '../i18n/content';
+
+// Idioma da página (pt | en): as rotas em src/pages/ e src/pages/en/ só passam esta prop.
+const locale: Locale = (Astro.props as { locale?: Locale }).locale ?? 'pt';
+const en = locale === 'en';
+const c = getContent(locale);
+const page = c.reconhecimentos;
+const premios = c.premios;
+const midiaData = c.midia;
+
+// Logos reais de cada veículo/prêmio da lista de mídia — o JSON de conteúdo não pode importar
+// assets do Astro, então (mesmo padrão já usado pro logo do INGOH em index.astro) um dicionário
+// aqui casa o `veiculo` de cada item de midia.json com o arquivo importado.
+import jornalNacionalLogo from '../assets/images/jornal-nacional-logo.png';
+import katieRichardsLogo from '../assets/images/lmh-logo.svg';
+import oGlobo100Logo from '../assets/images/o-globo-100-logo.avif';
+import brazilJournalLogo from '../assets/images/brazil-journal.webp';
+import cnnBrasilLogo from '../assets/images/cnn-brasil-logo.png';
+import forbesLogo from '../assets/images/forbes-logo.png';
+import correioBrazilienseLogo from '../assets/images/correio-braziliense-logo.png';
+import globalStudentPrizeLogo from '../assets/images/global-student-prize-logo.png';
+import lalaLogo from '../assets/images/lala-logo.png';
+import givologyLogo from '../assets/images/givology-logo.jpg';
+import gentilezaGenerosidadeLogo from '../assets/images/gentileza-generosidade-logo.png';
+import orangeJuiceLogo from '../assets/images/orange-juice-logo.jpg';
+import tropicalFmLogo from '../assets/images/tropical-fm-logo.png';
+import caprichoLogo from '../assets/images/capricho-logo.webp';
+import g1Logo from '../assets/images/g1-logo.svg';
+import brasaLogo from '../assets/images/brasa-logo.webp';
+
+const { hero, destaques, midia, transparencia } = page;
+
+interface MidiaItem {
+  veiculo: string;
+  tema: string;
+  data: string;
+  link?: string;
+  pendente?: string;
+  lideranca?: boolean;
+}
+
+const [premioLed, watsonSummit, theWall] = premios as { titulo: string; instituicao?: string; ano: number; texto?: string; pendente?: string; link?: string }[];
+const midiaTyped = midiaData as MidiaItem[];
+
+const logosByVeiculo: Record<string, ImageMetadata> = {
+  'Jornal Nacional': jornalNacionalLogo,
+  'Katie Richards Prize for Volunteering Excellence': katieRichardsLogo,
+  'O Globo — 101 Brasileiros': oGlobo100Logo,
+  'Brazil Journal': brazilJournalLogo,
+  'CNN Brasil': cnnBrasilLogo,
+  'Forbes Under 30': forbesLogo,
+  'Correio Braziliense': correioBrazilienseLogo,
+  'Global Student Prize': globalStudentPrizeLogo,
+  'Latin American Leadership Academy': lalaLogo,
+  'Givology Impact Series': givologyLogo,
+  'Gentileza Generosidade': gentilezaGenerosidadeLogo,
+  'Podcast Orange Juice': orangeJuiceLogo,
+  'Tropical FM Birigui': tropicalFmLogo,
+  Capricho: caprichoLogo,
+  G1: g1Logo,
+  BRASA: brasaLogo,
+};
+
+// A ONU, o Watson Institute e o The Wall agora são destaques ao lado do Prêmio LED (todos com
+// conteúdo confirmado e completo) — nenhum dos três repete como linha na tabela de mídia abaixo.
+const midiaRows = midiaTyped.filter((m) => m.veiculo !== 'ONU — Web TV');
+
+function isPendente(value: string) {
+  return /^\[PENDENTE/i.test(value.trim());
+}
+
+// midia.json guarda datas exatas em ISO (ordenável); exibir em formato brasileiro (pt) ou por extenso (en).
+const MESES_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function displayDate(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  return en ? `${MESES_EN[Number(match[2]) - 1]} ${Number(match[3])}, ${match[1]}` : `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+---
+
+<Layout title={page.title} description={page.description} locale={locale}>
+  <section class="hero">
+    <div class="container">
+      <p class="caption kicker kicker--dark hero__kicker">{hero.title}</p>
+      <h1 class="hero__titulo" data-reveal-words>{hero.subtitulo}</h1>
+    </div>
+  </section>
+
+  <section class="destaques" aria-labelledby="destaques-heading">
+    <div class="container">
+      <h2 id="destaques-heading" class="kicker" data-reveal-words>{destaques.kicker}</h2>
+      <div class="destaques__grid">
+        <article class="destaque-card" data-reveal-block>
+          <div class="destaque-card__media">
+            <VideoPlayer
+              src="/videos/premio-led-inspira.mp4"
+              poster={premioLedImage}
+              posterAlt={premioLed.titulo}
+              title={premioLed.titulo}
+              ratio="16 / 9"
+            />
+          </div>
+          <div class="destaque-card__body">
+            <p class="caption destaque-card__label">{en ? 'Award' : 'Prêmio'} · {premioLed.ano}</p>
+            <h3>{premioLed.titulo}</h3>
+            <p class="caption destaque-card__source">{premioLed.instituicao}</p>
+            <p>{premioLed.texto}</p>
+          </div>
+        </article>
+
+        <article class="destaque-card" data-reveal-block style="transition-delay:100ms">
+          <div class="destaque-card__media">
+            <VideoPlayer
+              src="/videos/onu-discurso.mp4"
+              poster={onuImage}
+              posterAlt={destaques.onu.titulo}
+              title={destaques.onu.titulo}
+              ratio="16 / 9"
+            />
+          </div>
+          <div class="destaque-card__body">
+            <p class="caption destaque-card__label">{en ? 'Speech' : 'Discurso'} · {destaques.onu.ano}</p>
+            <h3>{destaques.onu.titulo}</h3>
+            <p class="caption destaque-card__source">{destaques.onu.instituicao}</p>
+            <p>{destaques.onu.texto}</p>
+            <p class="caption destaque-card__note">{destaques.onu.notaMinuto}</p>
+            {destaques.onu.link && (
+              <a class="destaque-card__link" href={destaques.onu.link} target="_blank" rel="noopener noreferrer">
+                {en ? 'See it on the UN website →' : 'Ver no site da ONU →'}
+              </a>
+            )}
+          </div>
+        </article>
+
+        <article class="destaque-card" data-reveal-block style="transition-delay:200ms">
+          <div class="destaque-card__media">
+            <VideoPlayer
+              src="/videos/watson-institute-summit.mp4"
+              poster={watsonImage}
+              posterAlt={watsonSummit.titulo}
+              title={watsonSummit.titulo}
+              ratio="16 / 9"
+            />
+          </div>
+          <div class="destaque-card__body">
+            <p class="caption destaque-card__label">Summit · {watsonSummit.ano}</p>
+            <h3>{watsonSummit.titulo}</h3>
+            <p class="caption destaque-card__source">{watsonSummit.instituicao}</p>
+            <p>{watsonSummit.texto}</p>
+          </div>
+        </article>
+
+        <article class="destaque-card" data-reveal-block style="transition-delay:300ms">
+          <Image
+            src={theWallImage}
+            alt={theWall.titulo}
+            class="destaque-card__photo"
+            style="object-position: center 28%;"
+            widths={[480, 768, 1000]}
+            sizes="(min-width: 720px) 45vw, 100vw"
+          />
+          <div class="destaque-card__body">
+            <p class="caption destaque-card__label">TV · {theWall.ano}</p>
+            <h3>{theWall.titulo}</h3>
+            <p class="caption destaque-card__source">{theWall.instituicao}</p>
+            <p>{theWall.texto}</p>
+            {theWall.link && (
+              <a class="destaque-card__link" href={theWall.link} target="_blank" rel="noopener noreferrer">
+                {en ? 'Watch →' : 'Assistir →'}
+              </a>
+            )}
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="midia" aria-labelledby="midia-heading">
+    <div class="container">
+      <h2 id="midia-heading" class="kicker kicker--dark" data-reveal-words>{midia.kicker}</h2>
+    </div>
+    {/*
+      Boxes passando na horizontal em vez de lista/tabela — a pedido. Duas cópias da mesma
+      sequência lado a lado (mesma técnica do ticker de áreas da Jornada na Home) pra dar um
+      loop contínuo sem salto: quando a primeira cópia sai de vista, a segunda já está no
+      lugar exato. A segunda cópia é `aria-hidden` e cada link nela leva `tabindex={-1}` — o
+      conteúdo real (navegável, leitor de tela) é só a primeira; sem isso, teclado e leitor de
+      tela passariam pela mesma lista duas vezes.
+    */}
+    <div class="midia-ticker" data-reveal-block>
+      <div class="midia-ticker__track">
+        {
+          [0, 1].map((copy) => (
+            <div class="midia-ticker__group" aria-hidden={copy === 1 ? 'true' : undefined}>
+              {midiaRows.map((item) => (
+                <article class="midia-box">
+                  {logosByVeiculo[item.veiculo] && <Image src={logosByVeiculo[item.veiculo]} alt="" class="midia-box__logo" widths={[100, 160]} sizes="130px" />}
+                  <p class="caption midia-box__veiculo">
+                    {item.veiculo}
+                    {item.lideranca && <span class="lideranca-badge">{midia.liderancaLabel}</span>}
+                  </p>
+                  <div class="midia-box__tema">{isPendente(item.tema) ? <PendingNote text={item.tema} compact /> : item.tema}</div>
+                  <div class="caption midia-box__data">{isPendente(item.data) ? <PendingNote text={item.data} compact /> : displayDate(item.data)}</div>
+                  {item.link && (
+                    <a class="midia-box__link" href={item.link} target="_blank" rel="noopener noreferrer" tabindex={copy === 1 ? -1 : undefined}>
+                      {en ? 'Visit →' : 'Acesse →'}
+                    </a>
+                  )}
+                </article>
+              ))}
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="transparencia" aria-labelledby="transparencia-heading">
+    <div class="container">
+      <h2 id="transparencia-heading" class="kicker" data-reveal-words>{transparencia.kicker}</h2>
+      <div class="table-scroll" data-reveal-block>
+        <table class="transparencia-table">
+          <tbody>
+            {
+              transparencia.campos.map((c: { campo: string; valor: string }) => (
+                <tr>
+                  <th scope="row">{c.campo}</th>
+                  <td>{c.valor}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="transparencia__notas">
+        <p>{transparencia.datasTexto}</p>
+        <p>{transparencia.consultaTexto}</p>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  section {
+    padding-block: clamp(3.5rem, 2.5rem + 4vw, 6.5rem);
+  }
+
+  section + section {
+    border-top: 1px solid var(--color-border);
+  }
+
+  /*
+    Hero — reformulado pra parar de ler como uma tela cheia dedicada só à
+    introdução, a pedido explícito ("o primeiro reconhecimento deve começar
+    a aparecer no final do primeiro viewport... não quero uma seção hero
+    ocupando 100vh"). Nunca usou min-height/vh pra começar (a altura sempre
+    foi só a soma de padding+conteúdo), mas o padding generoso + o h1 na
+    escala --text-hero inteira + o padding-top do zero da seção seguinte
+    juntos empurravam o primeiro card pra bem abaixo da dobra em qualquer
+    altura de tela comum. Reduzido nos dois lados: padding bem mais enxuto
+    aqui, e `.destaques` (abaixo) ganhou um padding-top próprio, bem menor
+    que o genérico de `section` — a diferença entre os dois é o "respiro"
+    pedido, curto o bastante pra sobrar espaço pro topo do primeiro card já
+    espiar na primeira tela.
+  */
+  /* Topo em azul "misturado" (a pedido): mesma receita de brilhos radiais dos cards e da faixa de mídia. */
+  .hero {
+    background:
+      radial-gradient(circle at 94% 12%, rgba(127, 180, 238, 0.42), transparent 45%),
+      radial-gradient(circle at 4% 100%, rgba(127, 180, 238, 0.28), transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(44, 92, 130, 0.85), transparent 70%),
+      var(--color-primary-dark);
+    border-top: none;
+    padding-block: clamp(2.5rem, 2rem + 2.5vw, 4rem) clamp(2rem, 1.5rem + 2vw, 3rem);
+  }
+
+  /*
+    Sem o teto de 34rem usado nas outras páginas: "Reconhecimentos &
+    Transparência" é um título mais longo que "Jornada Pedagógica" ou "Faça
+    Parte" — com essa largura, a quebra de linha deixava o "e"/"&" sozinho
+    numa segunda linha (bug real). 44rem dá espaço pro título quebrar num
+    ponto mais equilibrado, em duas linhas naturais.
+    `font-size` próprio, um degrau abaixo do --text-hero global (usado nos
+    H1 do resto do site) — pedido explícito permitindo o título "ligeiramente
+    menor" aqui pra sobrar espaço pro conteúdo seguinte, já que esta página
+    (diferente das outras) precisa mostrar o começo da próxima seção na
+    mesma tela.
+  */
+  /*
+    Topo montado como a abertura da Jornada (a pedido): "Reconhecimentos & Transparência" vira o rótulo
+    pequeno em amarelo-limão (.kicker--dark) e "Trajetória e mídia" é o título grande em branco, do
+    mesmo tamanho do "Uma escola mais divertida e atrativa" da Jornada (fonte calibrada pela largura do
+    container; ~56px em 1024px). A frase "Prêmios, aparições na mídia…" saiu.
+  */
+  .hero__titulo {
+    margin-top: 1rem;
+    color: var(--color-bg);
+    max-width: none;
+    font-size: clamp(1.875rem, calc(min(100vw - 3rem, 69.5rem) / 17.4), 4.25rem);
+    line-height: 1.12;
+  }
+
+  /*
+    Só o topo desta seção fica mais compacto que o padding genérico de `section`
+    (o resto da página não muda) — é esse respiro reduzido, somado ao hero mais
+    enxuto acima, que deixa o topo do primeiro card já visível no fim da
+    primeira tela em alturas de viewport comuns, sem depender de vh/min-height
+    em lugar nenhum.
+  */
+  .destaques {
+    padding-top: clamp(1rem, 0.5rem + 1.5vw, 1.75rem);
+  }
+
+  /* Destaques */
+  .destaques__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+  }
+
+  /*
+    Cards de destaque em azul "misturado" (a pedido): azul-escuro de base com brilhos radiais de azul
+    claro nos cantos e um azul médio no miolo — mesma ideia do degradê da Jornada (nada de linear de
+    cima pra baixo). Brilhos suaves (<= .38) pra letra clara/amarelo-limão seguir legível.
+  */
+  .destaque-card {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(127, 180, 238, 0.38), transparent 55%),
+      radial-gradient(circle at 0% 100%, rgba(127, 180, 238, 0.26), transparent 55%),
+      radial-gradient(circle at 55% 50%, rgba(44, 92, 130, 0.85), transparent 75%),
+      var(--color-primary-dark);
+    border: 1px solid rgba(250, 248, 244, 0.18);
+    color: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .destaque-card h3 {
+    color: var(--color-bg);
+  }
+
+  .destaque-card p {
+    color: rgba(250, 248, 244, 0.92);
+  }
+
+  /*
+    Fotos reais dos quatro destaques, todas na mesma proporção 16/9 (a grade 2×2 fica uniforme).
+    object-position padrão é centralizado — cada foto foi testada de antemão (recortes com
+    `sharp`, ver CLAUDE.md) e só a foto do "The Wall" precisou de um desvio (`style` inline no
+    template, `object-position: center 28%`, pra também mostrar o logo "THE WALL" legível no
+    fundo em vez de só o centro do corpo das pessoas); as outras três (LED, ONU, Watson) já
+    ficam bem enquadradas com o centro puro.
+  */
+  .destaque-card__photo {
+    display: block;
+    width: 100%;
+    /*
+      height:auto explícito é necessário aqui: o <img> gerado por astro:assets carrega os
+      atributos HTML width/height do arquivo original como "dica de apresentação" — prioridade
+      baixa, mas ainda maior que a ausência de uma regra CSS pra essa propriedade. Sem isso, o
+      atributo height (a altura real do arquivo, ~1474px) vencia silenciosamente sobre o
+      aspect-ratio abaixo, e a imagem renderizava enorme/desproporcional (bug real, achado
+      medindo o retângulo renderizado, não só olhando).
+    */
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  /*
+    LED e Watson viraram destaques audiovisuais — o <VideoPlayer> ocupa o mesmo espaço que a
+    <Image> ocupava (16/9, largura cheia do card), sem nenhuma moldura extra: o componente já é
+    reto e sem sombra por padrão (mesmo padrão do vídeo do Prêmio LED na Home), então nenhuma
+    regra nova de borda foi necessária aqui — só min-width:0 no item flex, mesma razão já
+    documentada pras fotos (evita que o filho "vaze" da coluna do card).
+  */
+  .destaque-card__media {
+    min-width: 0;
+  }
+
+  .destaque-card__media :global(.video-player) {
+    width: 100%;
+    height: auto;
+  }
+
+  .destaque-card__body {
+    padding: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .destaque-card__label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+
+  /* As regras abaixo vêm depois de ".destaque-card p" e têm especificidade maior (classe + classe). */
+  .destaque-card .destaque-card__label {
+    color: var(--color-accent);
+  }
+
+  .destaque-card .destaque-card__source,
+  .destaque-card .destaque-card__note {
+    color: rgba(250, 248, 244, 0.8);
+  }
+
+  .destaque-card__link {
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .destaque-card__link:hover,
+  .destaque-card__link:focus-visible {
+    color: var(--color-bg);
+    text-decoration: underline;
+  }
+
+  @media (min-width: 720px) {
+    .destaques__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Mídia e aparições */
+  .table-scroll {
+    margin-top: 1rem;
+    overflow-x: auto;
+  }
+
+  .transparencia-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .lideranca-badge {
+    display: block;
+    margin-top: 0.35rem;
+    width: fit-content;
+    background: color-mix(in srgb, var(--color-accent) 55%, var(--color-bg));
+    color: var(--color-on-accent);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.45rem;
+  }
+
+  /*
+    Mídia e aparições — boxes passando na horizontal (mesma técnica do ticker de áreas da
+    Jornada na Home: duas cópias lado a lado, translateX até -50%, loop sem salto). Pausa no
+    hover pra dar tempo de ler/clicar num link. Sem prefers-reduced-motion, para animado —
+    ver global.css, que já zera a duração de toda animação/transição nesse caso.
+    Duração do `@keyframes` abaixo recalibrada pra 16 itens (dobrou de tamanho desde que 36s foi
+    escolhido, pra uma lista bem menor — a MESMA duração pra uma faixa duas vezes mais comprida
+    significa passar duas vezes mais rápido) e ainda mais lenta que isso, a pedido explícito
+    ("a coluna tá passando rápido demais, tem que ser mais lento pra dar tempo de leitura").
+  */
+  /*
+    A faixa inteira de "Mídia e aparições" é azul "misturado" (a pedido) — base --color-primary-dark com
+    brilhos radiais de azul claro, mesma receita dos cards de destaque e da Jornada — e os boxes dos
+    links seguem BRANCOS por cima dela (o contraste de cada box com o texto escuro não muda).
+  */
+  .midia {
+    background:
+      radial-gradient(circle at 92% 8%, rgba(127, 180, 238, 0.4), transparent 45%),
+      radial-gradient(circle at 6% 92%, rgba(127, 180, 238, 0.3), transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(44, 92, 130, 0.85), transparent 70%),
+      var(--color-primary-dark);
+    border-top: none;
+  }
+
+  .midia-ticker {
+    margin-top: 1.5rem;
+    overflow: hidden;
+  }
+
+  .midia-ticker__track {
+    display: flex;
+    width: max-content;
+    animation: midia-ticker-scroll 90s linear infinite;
+  }
+
+  .midia-ticker:hover .midia-ticker__track {
+    animation-play-state: paused;
+  }
+
+  .midia-ticker__group {
+    display: flex;
+    flex: none;
+    gap: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .midia-box {
+    flex: none;
+    width: 16rem;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /*
+    Logo real de cada veículo/prêmio — mesmo tratamento já usado pro logo do INGOH em
+    "Parceiros e apoiadores" da Home: altura fixa, largura livre (sem distorcer a proporção
+    original), sem moldura de foto (não é fotografia, é marca de terceiro). `align-self:
+    flex-start` evita o stretch padrão de item de flex em coluna, que senão obrigaria a
+    imagem a ocupar a largura inteira do card antes do object-fit entrar em jogo.
+    `max-height` bem maior que a primeira versão (2rem) — pedido explícito ("quero que as
+    logos fiquem bem maiores").
+  */
+  .midia-box__logo {
+    align-self: flex-start;
+    height: auto;
+    max-height: 3.5rem;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  .midia-box__veiculo {
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .midia-box__tema {
+    color: var(--color-text-secondary);
+    max-width: none;
+  }
+
+  /*
+    "Acesse →" — texto sublinhado, sem moldura de botão (a pedido explícito, reverte a versão
+    anterior em caixa). `margin-top: auto` volta a empurrar o link pro rodapé do card — como os
+    16 cards do ticker já têm a mesma altura (esticados igualmente pelo `display:flex` do
+    `.midia-ticker__group`, sem `align-items` próprio = stretch padrão), isso faz o "Acesse" de
+    todos ficar exatamente na mesma linha horizontal, também a pedido explícito
+    ("quero que todos os 'Acesse' fiquem alinhados horizontalmente entre si"). `align-self:
+    flex-start` no eixo cruzado (largura, já que o card é uma coluna) evita que o link estique
+    pra largura inteira do card — continua do tamanho do próprio texto.
+  */
+  .midia-box__link {
+    align-self: flex-start;
+    margin-top: auto;
+    padding-top: 0.5rem;
+    font-weight: 500;
+    text-decoration: underline;
+  }
+
+  @keyframes midia-ticker-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Transparência institucional */
+  .transparencia-table th,
+  .transparencia-table td {
+    text-align: left;
+    padding: 0.85rem 1rem 0.85rem 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .transparencia-table tr:first-child th,
+  .transparencia-table tr:first-child td {
+    border-top: none;
+  }
+
+  .transparencia-table th {
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    width: 14rem;
+  }
+
+  .transparencia-table td {
+    font-weight: 500;
+  }
+
+  .transparencia__notas {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 40rem;
+  }
+
+  .transparencia__notas p {
+    max-width: none;
+  }
+</style>

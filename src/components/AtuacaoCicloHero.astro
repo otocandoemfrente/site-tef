@@ -1,0 +1,664 @@
+---
+import Icon from './Icon.astro';
+import { localeFromUrl } from '../i18n/locale';
+
+interface Momento {
+  id: string;
+  nome: string;
+  texto: string;
+}
+
+interface Props {
+  /** Rótulo pequeno em amarelo, acima do título (ex.: "Atuação"). */
+  kicker: string;
+  /** Título grande em branco (ex.: "Por jovens, para jovens."). */
+  titulo: string;
+  momentos: Momento[];
+}
+
+const { kicker, titulo, momentos } = Astro.props;
+const en = localeFromUrl(Astro.url) === 'en';
+const n = momentos.length; // 5 — Seleção, Formação, Sala de aula, Impacto mensurado, Nova geração (o ciclo fecha em Seleção)
+
+const box = 500;
+const cx = box / 2;
+const cy = box / 2;
+const ringR = 180;
+
+function polar(r: number, deg: number) {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+// Os quatro pontos ficam exatamente nos quatro quadrantes do círculo — não há mais rótulo de
+// texto na própria trilha (ver CLAUDE.md): o nome de cada etapa só existe no painel à direita,
+// pra manter o círculo puramente visual/gestual.
+const marks = momentos.map((m, i) => {
+  const deg = (360 / n) * i;
+  return { ...m, index: i, ...polar(ringR, deg), deg };
+});
+
+// Um arco de 90° por etapa, ligando cada ponto ao próximo — cada arco nasce (stroke-dashoffset
+// 1→0) só quando o avião o percorre, e fica com a cor da etapa de onde ele partiu.
+function describeQuarter(fromIdx: number) {
+  const a0 = (360 / n) * fromIdx;
+  const a1 = a0 + 360 / n;
+  const p0 = polar(ringR, a0);
+  const p1 = polar(ringR, a1);
+  return `M ${p0.x} ${p0.y} A ${ringR} ${ringR} 0 0 1 ${p1.x} ${p1.y}`;
+}
+const segments = momentos.map((_, i) => describeQuarter(i));
+
+// Ponto de partida do avião: exatamente sobre "Diretor Regional" (topo do círculo).
+const planeStart = polar(ringR, 0);
+
+// ===== Finale: quando o ciclo fecha e volta pra "Diretor Regional" pela última vez, um punhado
+// de pequenas marcas "nasce" ao redor do ponto de origem — a leitura visual de que o impacto na
+// escola gera novos jovens que podem se tornar Diretores Regionais. Posições fixas (hand-placed,
+// não grade/trigonometria regular), sempre do lado de FORA do anel (afastando-se do centro), ao
+// redor do próprio ponto de "Diretor Regional" (marks[0]) — nunca em volta do centro do círculo.
+const drPoint = marks[0];
+function offsetFrom(origin: { x: number; y: number }, dist: number, deg: number) {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: origin.x + dist * Math.cos(rad), y: origin.y + dist * Math.sin(rad) };
+}
+const finaleParticles = [
+  { angle: -35, dist: 15, delay: 0 },
+  { angle: -70, dist: 23, delay: 90 },
+  { angle: -10, dist: 25, delay: 160 },
+  { angle: 20, dist: 13, delay: 240 },
+  { angle: -50, dist: 28, delay: 320 },
+  { angle: -95, dist: 17, delay: 400 },
+].map((p) => ({ ...p, ...offsetFrom(drPoint, p.dist, p.angle), r: 1.7 + (p.dist % 5) * 0.15 }));
+---
+
+<section
+  class="ciclo-hero"
+  aria-label={en ? 'How the Regional Director’s journey works at Tocando em Frente' : 'Como funciona a jornada do Diretor Regional no Tocando em Frente'}
+  data-momentos={JSON.stringify(momentos.map(({ nome, texto }) => ({ nome, texto })))}
+>
+  {/* Cabeçalho montado como o da Jornada e o de Reconhecimentos: rótulo pequeno amarelo em cima, título grande
+      branco embaixo; a rodinha vem depois. */}
+  <div class="container ciclo-hero__head">
+    <p class="caption kicker kicker--dark">{kicker}</p>
+    <h1 class="ciclo-hero__titulo" data-reveal-words>{titulo}</h1>
+  </div>
+
+  <div class="ciclo-hero__wrap" data-ciclo-wrap style={`--seg:${n + 0.5}`}>
+    <div class="ciclo-hero__sticky">
+      <div class="container ciclo-hero__layout">
+        <div class="ciclo-hero__stage">
+          <div class="ciclo-hero__frame" data-ciclo-frame>
+            <svg viewBox={`0 0 ${box} ${box}`} width="100%" height="100%" role="img" aria-label={en ? `Continuous cycle of the Regional Director’s journey at Tocando em Frente: ${momentos.map((m) => m.nome).join(', ')}, returning to the start.` : `Ciclo contínuo da jornada do Diretor Regional no Tocando em Frente: ${momentos.map((m) => m.nome).join(', ')}, retornando ao início.`}>
+              <circle class="ciclo-hero__track" cx={cx} cy={cy} r={ringR} />
+              {
+                segments.map((d, i) => (
+                  <path class="ciclo-hero__segment" data-segment data-index={i} d={d} fill="none" pathLength="1" style={`--mc: var(--m${i})`} />
+                ))
+              }
+
+              {
+                marks.map((m) => (
+                  <g class="ciclo-hero__mark" data-mark data-index={m.index} transform={`translate(${m.x} ${m.y})`} style={`--mc: var(--m${m.index})`}>
+                    <circle class="ciclo-hero__mark-halo" r="4" />
+                    <circle class="ciclo-hero__mark-dot" r="4.5" />
+                  </g>
+                ))
+              }
+
+              {/* Finale: fica invisível/quieto até o ciclo fechar e voltar pra "Diretor Regional"
+                  pela última vez (ver script) — então um brilho maior nasce sobre o próprio ponto
+                  de origem e um punhado de marcas pequenas desabrocha ao redor dele, sugerindo
+                  novos Diretores Regionais surgindo do impacto gerado. */}
+              <g class="ciclo-hero__finale" data-finale>
+                <circle class="ciclo-hero__finale-glow" cx={drPoint.x} cy={drPoint.y} r="6" />
+                {
+                  finaleParticles.map((p) => (
+                    <circle class="ciclo-hero__finale-particle" cx={p.x} cy={p.y} style={`--fp-delay: ${p.delay}ms; --fp-r: ${p.r}px`} />
+                  ))
+                }
+              </g>
+            </svg>
+
+            <div class="ciclo-hero__plane" data-ciclo-plane style={`left:${(planeStart.x / box) * 100}%; top:${(planeStart.y / box) * 100}%;`}>
+              <span class="ciclo-hero__ball"></span>
+            </div>
+
+            {/* Marco no centro do círculo: some até o ciclo fechar a primeira volta (mesmo
+                instante do brilho/partículas sobre "Diretor Regional", ver script) — sinaliza
+                de forma literal o que o brilho já sugere visualmente. */}
+            <div class="ciclo-hero__milestone" data-milestone aria-hidden="true">
+              <Icon name="escola" class="ciclo-hero__milestone-icon" />
+              <span>{en ? '+1 school impacted' : '+1 escola impactada'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ciclo-hero__content">
+          {/* As cinco etapas, sempre à vista (como os tópicos da Teoria da Mudança): a ativa abre a descrição. */}
+          <ol class="ciclo-hero__steps" data-ciclo-steps>
+            {
+              momentos.map((m, i) => (
+                <li class="ciclo-hero__step" data-step data-index={i} style={`--mc: var(--m${i})`}>
+                  <h2 class="ciclo-hero__step-name">
+                    <span class="ciclo-hero__step-num">{String(i + 1).padStart(2, '0')}</span>
+                    {m.nome}
+                  </h2>
+                  <div class="ciclo-hero__step-body">
+                    <p>{m.texto}</p>
+                  </div>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /*
+    A seção inteira é azul "misturado" (a pedido: "tudo em css azul gradiente"): base --color-primary-dark e
+    uma camada sticky de brilhos radiais de azul claro (mesma receita da Jornada) presa à tela enquanto a
+    seção rola. Sobre o azul, o ciclo é todo branco + amarelo-limão: as cinco etapas usam o mesmo
+    --color-accent (as cores por etapa, azul/verde, sumiriam no fundo escuro).
+    padding-block: 0 explícito — o `section` global tem padding e a camada ::before precisa começar no topo.
+  */
+  .ciclo-hero {
+    --m0: var(--color-accent);
+    --m1: var(--color-accent);
+    --m2: var(--color-accent);
+    --m3: var(--color-accent);
+    --m4: var(--color-accent);
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    padding-block: 0;
+    background: var(--color-primary-dark);
+    color: var(--color-bg);
+  }
+
+  .ciclo-hero::before {
+    content: '';
+    position: sticky;
+    top: 0;
+    display: block;
+    height: 100vh;
+    margin-bottom: -100vh;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 92% 8%, rgba(127, 180, 238, 0.45), transparent 42%),
+      radial-gradient(circle at 6% 55%, rgba(127, 180, 238, 0.3), transparent 45%),
+      radial-gradient(circle at 90% 95%, rgba(127, 180, 238, 0.4), transparent 42%),
+      radial-gradient(circle at 50% 45%, rgba(44, 92, 130, 0.9), transparent 70%);
+  }
+
+  .ciclo-hero__head {
+    padding-block: clamp(2.5rem, 2rem + 2vw, 4rem) clamp(1rem, 0.5rem + 1.5vw, 2rem);
+  }
+
+  /* Mesmo tamanho do "Uma escola mais divertida e atrativa" da Jornada (calibrado pela largura do container). */
+  .ciclo-hero__titulo {
+    margin-top: 1rem;
+    color: var(--color-bg);
+    max-width: none;
+    font-size: clamp(1.875rem, calc(min(100vw - 3rem, 69.5rem) / 17.4), 4.25rem);
+    line-height: 1.12;
+  }
+
+  /* Wrapper alto de scroll + sticky — mesma técnica já usada nas gavetas dos "três
+     movimentos" da Home e no conector da Frente 02: getBoundingClientRect() + listener de
+     scroll, não IntersectionObserver (não dá granularidade contínua). */
+  .ciclo-hero__wrap {
+    position: relative;
+    height: calc(var(--seg) * 60vh);
+  }
+
+  .ciclo-hero__sticky {
+    position: sticky;
+    top: var(--header-height);
+    min-height: calc(100vh - var(--header-height));
+    display: flex;
+    align-items: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ciclo-hero__wrap {
+      height: auto;
+    }
+
+    .ciclo-hero__sticky {
+      position: static;
+      min-height: auto;
+      display: block;
+      padding-block: 2rem;
+    }
+  }
+
+  .ciclo-hero__layout {
+    width: 100%;
+  }
+
+  /* Desktop: experiência visual grande à esquerda, bloco de texto pequeno à direita — a
+     proporção inversa da composição anterior (muito texto, gráfico pequeno). No mobile os
+     dois empilham (círculo em cima) só pela ordem do markup, sem CSS extra. */
+  @media (min-width: 720px) {
+    .ciclo-hero__layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(2rem, 1rem + 4vw, 4rem);
+    }
+  }
+
+  .ciclo-hero__frame {
+    position: relative;
+    width: 100%;
+    max-width: 34rem;
+    margin-inline: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  /* Telas baixas: o círculo encolhe pra caber inteiro entre o cabeçalho e o rodapé da tela. */
+  @media (min-width: 720px) {
+    .ciclo-hero__frame {
+      width: min(100%, 36rem, calc(100dvh - var(--header-height) - 4rem));
+    }
+  }
+
+  /* Trilho do círculo já desenhado desde o começo (tracejado, quase apagado): a figura aparece inteira e o
+     movimento só a vai colorindo — a seção não abre vazia. */
+  .ciclo-hero__track {
+    fill: none;
+    stroke: rgba(250, 248, 244, 0.4);
+    stroke-width: 1.6;
+    stroke-dasharray: 2 7;
+    stroke-linecap: round;
+  }
+
+  /* ===== trajetória — cada quarto de volta nasce da posição do avião, nunca pré-desenhado ===== */
+  .ciclo-hero__segment {
+    stroke: var(--mc);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    opacity: 0.85;
+  }
+
+  /* ===== marcas das quatro etapas — pontos quietos até o avião chegar ===== */
+  .ciclo-hero__mark {
+    opacity: 0.45;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: opacity 0.4s ease;
+  }
+
+  .ciclo-hero__mark.is-revealed {
+    opacity: 1;
+  }
+
+  .ciclo-hero__mark-dot {
+    fill: var(--color-primary-dark);
+    stroke: rgba(250, 248, 244, 0.85);
+    stroke-width: 1.4;
+    transition: stroke 0.3s ease, fill 0.3s ease, r 0.3s ease;
+  }
+
+  .ciclo-hero__mark-halo {
+    fill: var(--mc);
+    opacity: 0;
+    transition: opacity 0.35s ease, r 0.5s ease;
+  }
+
+  .ciclo-hero__mark.is-active .ciclo-hero__mark-dot {
+    fill: var(--mc);
+    stroke: var(--mc);
+    r: 6.5;
+  }
+
+  .ciclo-hero__mark.is-active .ciclo-hero__mark-halo {
+    opacity: 0.28;
+    r: 17;
+  }
+
+  /*
+    ===== finale — o ciclo fecha e "nasce" um brilho maior + pequenas marcas ao redor de
+    "Diretor Regional" (ver script: dispara uma única vez, quando o avião completa a volta e
+    esse ponto acende pela segunda vez). Fica completamente invisível/inerte até a classe
+    .is-active entrar — não interfere em nada no resto da experiência. Usa só opacity + r (o
+    mesmo mecanismo de "escala" que o próprio halo das marcas já usa nesta seção, ver acima),
+    nunca um translate — evita qualquer ambiguidade de unidade entre CSS transform e o sistema
+    de coordenadas do SVG. Nada de partícula "explodindo": a curva é sempre ease-out, o pico de
+    tamanho é sutil (não passa de ~1,3x o tamanho final) e tudo acaba num estado quieto,
+    ligeiramente visível — o brilho e as marcas ficam, não desaparecem sem deixar rastro.
+  */
+  .ciclo-hero__finale-glow {
+    fill: var(--m0);
+    opacity: 0;
+    r: 0px;
+  }
+
+  .ciclo-hero__finale.is-active .ciclo-hero__finale-glow {
+    animation: ciclo-finale-glow 2.6s ease-out forwards;
+  }
+
+  @keyframes ciclo-finale-glow {
+    0% {
+      r: 6px;
+      opacity: 0;
+    }
+    35% {
+      r: 34px;
+      opacity: 0.32;
+    }
+    100% {
+      r: 22px;
+      opacity: 0.1;
+    }
+  }
+
+  .ciclo-hero__finale-particle {
+    fill: var(--m0);
+    opacity: 0;
+    r: 0px;
+  }
+
+  .ciclo-hero__finale.is-active .ciclo-hero__finale-particle {
+    animation: ciclo-finale-spark 1.8s ease-out forwards;
+    animation-delay: var(--fp-delay);
+  }
+
+  @keyframes ciclo-finale-spark {
+    0% {
+      r: 0px;
+      opacity: 0;
+    }
+    55% {
+      r: calc(var(--fp-r) * 1.25);
+      opacity: 0.95;
+    }
+    100% {
+      r: var(--fp-r);
+      opacity: 0.55;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ciclo-hero__finale.is-active .ciclo-hero__finale-glow {
+      animation: none;
+      r: 20px;
+      opacity: 0.12;
+    }
+
+    .ciclo-hero__finale.is-active .ciclo-hero__finale-particle {
+      animation: none;
+      r: var(--fp-r);
+      opacity: 0.5;
+    }
+  }
+
+  /*
+    ===== marco central — "+1 escola impactada", pedido explícito de deixar o significado do
+    brilho/partículas explícito em texto, não só sugerido. Fica no centro geométrico do círculo
+    (nunca cruzado pelo avião, que sempre viaja no raio do anel) — sem conflito com a "área de
+    proteção" das marcas/pop-ups, porque essa regra é de outra seção (SustentacaoMapa). Mesmo
+    gatilho e mesma classe .is-active do brilho/partículas (ver script) — os três aparecem juntos.
+  */
+  .ciclo-hero__milestone {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: center;
+    color: var(--color-bg);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .ciclo-hero__milestone.is-active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .ciclo-hero__milestone :global(.ciclo-hero__milestone-icon) {
+    width: 1.75rem;
+    height: 1.75rem;
+    color: var(--m0);
+  }
+
+  .ciclo-hero__milestone span {
+    font-size: var(--text-caption);
+    font-weight: 700;
+    max-width: 8rem;
+    line-height: var(--leading-caption);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ciclo-hero__milestone {
+      transition: none;
+    }
+  }
+
+  /* ===== bolinha — o guia da experiência (antes era o avião de papel), pedido explícito ===== */
+  .ciclo-hero__plane {
+    position: absolute;
+    width: 4.4%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Cor da etapa em curso (--active-color, trocada pelo script) com um halo suave. */
+  .ciclo-hero__ball {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%; /* círculo de verdade: exceção pontual, o próprio objeto é uma bolinha */
+    background: var(--active-color, var(--m0));
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--active-color, var(--m0)) 22%, transparent);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* ===== lista das etapas — todas à vista; a que está em curso abre a descrição (como os tópicos da Teoria da Mudança) ===== */
+  .ciclo-hero__content {
+    margin-top: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+  }
+
+  @media (min-width: 720px) {
+    .ciclo-hero__content {
+      margin-top: 0;
+    }
+  }
+
+  .ciclo-hero__steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: 30rem;
+  }
+
+  .ciclo-hero__step {
+    padding: 0.7rem 0 0.7rem 1.1rem;
+    border-left: 2px solid rgba(250, 248, 244, 0.3);
+    transition: border-color 0.3s ease;
+  }
+
+  .ciclo-hero__step-name {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0;
+    font-size: var(--text-h3);
+    line-height: var(--leading-h3);
+    font-weight: 600;
+    color: rgba(250, 248, 244, 0.72);
+    transition: color 0.3s ease;
+  }
+
+  .ciclo-hero__step-num {
+    font-size: var(--text-caption);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+
+  .ciclo-hero__step-body p {
+    margin: 0.4rem 0 0;
+    max-width: none;
+    color: rgba(250, 248, 244, 0.92);
+  }
+
+  /* Com JS, só a etapa ativa mostra o texto (abre por altura, sem saltos); sem JS, todas ficam abertas. */
+  .ciclo-hero.is-js .ciclo-hero__step-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.35s ease, opacity 0.3s ease;
+  }
+
+  .ciclo-hero.is-js .ciclo-hero__step-body > p {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .ciclo-hero__step.is-active {
+    border-left-color: var(--mc);
+  }
+
+  .ciclo-hero__step.is-active .ciclo-hero__step-name {
+    color: var(--mc);
+  }
+
+  .ciclo-hero.is-js .ciclo-hero__step.is-active .ciclo-hero__step-body {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ciclo-hero.is-js .ciclo-hero__step-body,
+    .ciclo-hero__step,
+    .ciclo-hero__step-name {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const motionAllowed = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+
+  function polar(cx: number, cy: number, r: number, deg: number) {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function clamp(v: number, lo: number, hi: number) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  const root = document.querySelector<HTMLElement>('.ciclo-hero');
+  if (!root) {
+    // no-op — a seção não existe nesta página
+  } else {
+    const wrap = root.querySelector<HTMLElement>('[data-ciclo-wrap]');
+    const plane = root.querySelector<HTMLElement>('[data-ciclo-plane]');
+    const marks = Array.from(root.querySelectorAll<SVGGElement>('[data-mark]'));
+    const segmentsEls = Array.from(root.querySelectorAll<SVGPathElement>('[data-segment]'));
+    const stepEls = Array.from(root.querySelectorAll<HTMLElement>('[data-step]'));
+    const finaleEl = root.querySelector<SVGGElement>('[data-finale]');
+    const milestoneEl = root.querySelector<HTMLElement>('[data-milestone]');
+
+    // Os textos de cada etapa já vêm renderizados no servidor (etapa 0); as outras três
+    // ficam guardadas aqui num atributo de dados pra não precisar de uma segunda fonte.
+    const momentos: { nome: string; texto: string }[] = JSON.parse(root.dataset.momentos ?? '[]');
+
+    const n = momentos.length;
+    const box = 500;
+    const cx = box / 2, cy = box / 2;
+    const ringR = 180;
+    const SEG_N = n + 0.5; // n etapas + uma pequena "cauda" que volta a pousar sobre a primeira (Seleção)
+
+    let activeIndex = -1;
+    let targetT = 0;
+    let displayT = 0;
+
+    // Só com movimento permitido a lista fica "recolhida" (a etapa ativa abre o texto); sem JS ou com
+    // movimento reduzido, as cinco descrições ficam abertas — nada depende da animação.
+    if (motionAllowed) root.classList.add('is-js');
+
+    // Dispara uma única vez, no exato instante em que o avião fecha a primeira volta e
+    // "Diretor Regional" acende de novo (i chega a n=4, antes do "% n") — o momento de
+    // fechamento emocional da seção, não repetido em scrolls seguintes pra frente e pra trás.
+    let finalePlayed = false;
+    function maybePlayFinale(i: number) {
+      if (finalePlayed || i < n) return;
+      finalePlayed = true;
+      finaleEl?.classList.add('is-active');
+      milestoneEl?.classList.add('is-active');
+    }
+
+    function setActive(i: number) {
+      if (i === activeIndex) return;
+      activeIndex = i;
+      const highlightIdx = i % n;
+      marks.forEach((m, idx) => m.classList.toggle('is-active', idx === highlightIdx));
+      root!.style.setProperty('--active-color', `var(--m${highlightIdx})`);
+      stepEls.forEach((s, idx) => s.classList.toggle('is-active', idx === highlightIdx));
+      maybePlayFinale(i);
+    }
+
+    function updateVisual(q: number) {
+      // q = quantidade de quartos de volta já percorridos (0..4 fecha o círculo; até 4.5
+      // é a "cauda" que segue suavemente até pousar de novo perto de Diretor Regional).
+      const angleDeg = q * (360 / n);
+      const p = polar(cx, cy, ringR, angleDeg);
+      if (plane) {
+        plane.style.left = `${(p.x / box) * 100}%`;
+        plane.style.top = `${(p.y / box) * 100}%`;
+      }
+
+      segmentsEls.forEach((seg, i) => {
+        const segT = clamp(q - i, 0, 1);
+        seg.style.strokeDashoffset = String(1 - segT);
+      });
+
+      marks.forEach((m, i) => {
+        m.classList.toggle('is-revealed', q >= i - 0.001);
+      });
+    }
+
+    if (!wrap) {
+      updateVisual(0);
+    } else {
+      function onScroll() {
+        const rect = wrap!.getBoundingClientRect();
+        const scrollable = rect.height - window.innerHeight;
+        const scrolled = clamp(-rect.top, 0, Math.max(scrollable, 0));
+        targetT = scrollable > 0 ? scrolled / scrollable : 0;
+
+        const q = targetT * SEG_N;
+        setActive(Math.floor(clamp(q, 0, SEG_N - 0.0001)));
+
+        if (!motionAllowed) {
+          updateVisual(q);
+        }
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+      displayT = targetT;
+
+      if (motionAllowed) {
+        function frame() {
+          displayT += (targetT - displayT) * 0.12;
+          updateVisual(displayT * SEG_N);
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+    }
+  }
+</script>

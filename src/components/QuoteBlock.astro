@@ -1,0 +1,119 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+import MediaPlaceholder from './MediaPlaceholder.astro';
+import QuoteIcon from './QuoteIcon.astro';
+
+interface Props {
+  quote: string;
+  name?: string;
+  role?: string;
+  portraitAlt?: string;
+  /** Foto real do retrato — quando omitida, cai de volta pro MediaPlaceholder. */
+  portrait?: ImageMetadata;
+  /** Sem retrato = frase de destaque solta (ex.: "Todo DR é um voluntário..."), não um depoimento pessoal. */
+  withPortrait?: boolean;
+}
+
+const { quote, name, role, portraitAlt, portrait, withPortrait = true } = Astro.props;
+---
+
+<div class:list={['quote-block', { 'quote-block--no-portrait': !withPortrait }]}>
+  {
+    withPortrait && portraitAlt && (
+      portrait ? (
+        <Image src={portrait} alt={portraitAlt} class="quote-block__photo" widths={[240, 360, 480]} sizes="(min-width: 720px) 25vw, 40vw" />
+      ) : (
+        <MediaPlaceholder label={portraitAlt} kind="Retrato" ratio="1 / 1" />
+      )
+    )
+  }
+  <div class="quote-block__copy">
+    <QuoteIcon class="quote-block__icon" />
+    <blockquote>
+      <p>{quote}</p>
+    </blockquote>
+    {
+      name && (
+        <p class="quote-block__byline">
+          <span>{name}</span>
+          {role && <> — {role}</>}
+        </p>
+      )
+    }
+  </div>
+</div>
+
+<style>
+  .quote-block {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .quote-block__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .quote-block__icon {
+    color: var(--color-accent);
+    width: 2rem;
+    height: 1.5rem;
+  }
+
+  /*
+    Foto real do retrato. height:auto explícito é necessário (mesma lição já documentada nas
+    fotos de Reconhecimentos e dos "três movimentos"): sem ele, o atributo HTML height do <img>
+    gerado por astro:assets vence silenciosamente sobre o aspect-ratio abaixo.
+  */
+  .quote-block__photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    object-position: center;
+    border: 1px solid var(--color-border);
+  }
+
+  blockquote {
+    margin: 0;
+  }
+
+  blockquote p {
+    font-size: var(--text-h3);
+    font-weight: 500;
+    line-height: var(--leading-h3);
+    color: var(--color-text);
+    max-width: none;
+  }
+
+  .quote-block__byline {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+  }
+
+  .quote-block__byline span {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  @media (min-width: 720px) {
+    .quote-block:not(.quote-block--no-portrait) {
+      grid-template-columns: repeat(var(--grid-columns), 1fr);
+      column-gap: var(--grid-gap);
+    }
+
+    .quote-block:not(.quote-block--no-portrait) :global(.media-placeholder),
+    .quote-block:not(.quote-block--no-portrait) .quote-block__photo {
+      grid-column: span 3;
+    }
+
+    .quote-block:not(.quote-block--no-portrait) .quote-block__copy {
+      grid-column: span 9;
+    }
+  }
+</style>
