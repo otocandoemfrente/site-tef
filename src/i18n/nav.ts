@@ -1,4 +1,9 @@
 export type Locale = 'pt' | 'en';
+const BASE = import.meta.env.BASE_URL;
+
+function withBase(path: string): string {
+  return `${BASE}${path.replace(/^\/+/, '')}`;
+}
 
 export interface NavItem {
   key: string;
@@ -13,31 +18,11 @@ export interface NavItem {
 // Rótulos PT curtos (Jornada / Contato) conforme o protótipo aprovado v2 — a página
 // em si continua sendo "Jornada Pedagógica" / "Faça Parte", só o rótulo do menu mudou.
 export const navItems: NavItem[] = [
-  { key: 'home', labelPt: 'Home', labelEn: 'Home', hrefPt: '/', hrefEn: '/en/' },
-  { key: 'atuacao', labelPt: 'Atuação', labelEn: 'Our Work', hrefPt: '/atuacao', hrefEn: '/en/atuacao' },
-  {
-    key: 'jornada',
-    labelPt: 'Jornada',
-    labelEn: 'Learning Journey',
-    hrefPt: '/jornada',
-    hrefEn: '/en/jornada',
-  },
-  {
-    key: 'reconhecimentos',
-    labelPt: 'Reconhecimentos',
-    labelEn: 'Recognition',
-    hrefPt: '/reconhecimentos',
-    hrefEn: '/en/reconhecimentos',
-  },
-  {
-    key: 'faca-parte',
-    labelPt: 'Contato',
-    labelEn: 'Get Involved',
-    // Aponta pra própria página Faça Parte (não uma rota separada) — sem âncora #contato: a
-    // pedido explícito, o clique no menu não deve pular pra baixo, a página abre no topo normal.
-    hrefPt: '/faca-parte',
-    hrefEn: '/en/faca-parte',
-  },
+  { key: 'home', labelPt: 'Home', labelEn: 'Home', hrefPt: withBase('/'), hrefEn: withBase('/en/') },
+  { key: 'atuacao', labelPt: 'Atuação', labelEn: 'Our Work', hrefPt: withBase('/atuacao/'), hrefEn: withBase('/en/atuacao/') },
+  { key: 'jornada', labelPt: 'Jornada', labelEn: 'Learning Journey', hrefPt: withBase('/jornada/'), hrefEn: withBase('/en/jornada/') },
+  { key: 'reconhecimentos', labelPt: 'Reconhecimentos', labelEn: 'Recognition', hrefPt: withBase('/reconhecimentos/'), hrefEn: withBase('/en/reconhecimentos/') },
+  { key: 'faca-parte', labelPt: 'Contato', labelEn: 'Get Involved', hrefPt: withBase('/faca-parte/'), hrefEn: withBase('/en/faca-parte/') },
 ];
 
 export const uiStrings = {
