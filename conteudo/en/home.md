@@ -34,10 +34,10 @@ movements:
     title: 'Seen: discovering possibilities'
     text: 'Robotics, debate, journalism, English, research, social projects. In six months, students try six fields they may never have seen up close.'
   - number: '02'
-    title: 'Aware: understanding oneself'
+    title: 'Known: understanding oneself'
     text: 'Now they look inward: what they like, what they are good at, what they dream of. And they discover that this dream runs through school.'
   - number: '03'
-    title: 'Engaged: turning dreams into action'
+    title: 'Enrolled: turning dreams into action'
     text: 'From the dream to the first step: a goal, a plan for the week and a Regional Director by their side so they don’t give up.'
 
 jornadaPreview:
