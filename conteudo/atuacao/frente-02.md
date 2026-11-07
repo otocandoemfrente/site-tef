@@ -8,7 +8,7 @@ onde: 'Territórios onde o TEF mantém atuação'
 desde: 2021
 quemParticipa: 'Jovens do interior do Brasil selecionados nacionalmente'
 parceiros: 'Escolas públicas, equipes locais e demais voluntários'
-drAtivosPendente: '[PENDENTE: número de Diretores Regionais ativos hoje]'
+drAtivos: '19'
 
 # Esquema visual de 3 etapas que substitui o parágrafo de contexto corrido — ver
 # FrenteVisualSteps.astro. Os números de impacto (escolas/estudantes) não ficam

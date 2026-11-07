@@ -6,6 +6,7 @@ onde: 'Territories where TEF operates'
 desde: 2021
 quemParticipa: 'Young people from inland Brazil selected nationwide'
 parceiros: 'Public schools, local teams and other volunteers'
+drAtivos: '19'
 
 processo:
   etapa1:
