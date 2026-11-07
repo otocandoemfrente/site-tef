@@ -1,5 +1,6 @@
 ---
 import type { Locale } from '../i18n/nav';
+import { videoUrl } from '../i18n/videos';
 import type { ImageMetadata } from 'astro';
 import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
@@ -105,7 +106,7 @@ function displayDate(value: string) {
         <article class="destaque-card" data-reveal-block>
           <div class="destaque-card__media">
             <VideoPlayer
-              src="/videos/premio-led-inspira.mp4"
+              src={videoUrl('premio-led-inspira.mp4')}
               poster={premioLedImage}
               posterAlt={premioLed.titulo}
               title={premioLed.titulo}
@@ -123,7 +124,7 @@ function displayDate(value: string) {
         <article class="destaque-card" data-reveal-block style="transition-delay:100ms">
           <div class="destaque-card__media">
             <VideoPlayer
-              src="/videos/onu-discurso.mp4"
+              src={videoUrl('onu-discurso.mp4')}
               poster={onuImage}
               posterAlt={destaques.onu.titulo}
               title={destaques.onu.titulo}
@@ -147,7 +148,7 @@ function displayDate(value: string) {
         <article class="destaque-card" data-reveal-block style="transition-delay:200ms">
           <div class="destaque-card__media">
             <VideoPlayer
-              src="/videos/watson-institute-summit.mp4"
+              src={videoUrl('watson-institute-summit.mp4')}
               poster={watsonImage}
               posterAlt={watsonSummit.titulo}
               title={watsonSummit.titulo}

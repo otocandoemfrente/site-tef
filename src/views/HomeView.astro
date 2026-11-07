@@ -1,5 +1,6 @@
 ---
 import type { Locale } from '../i18n/nav';
+import { videoUrl } from '../i18n/videos';
 import type { ImageMetadata } from 'astro';
 import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
@@ -234,7 +235,7 @@ const partnerLogos: Record<string, ImageMetadata> = {
       <article class="reconhecimentos-band reconhecimentos-band--media-first reconhecimento-destaque" data-reveal-block>
         <div class="reconhecimentos-band__media">
           <VideoPlayer
-            src="/videos/premio-led-luz-na-educacao.mp4"
+            src={videoUrl('premio-led-luz-na-educacao.mp4')}
             poster={premioLedVideoPoster}
             posterAlt={`${en ? 'Video' : 'Vídeo'}: ${premioLed.titulo}`}
             title={premioLed.titulo}
@@ -256,7 +257,7 @@ const partnerLogos: Record<string, ImageMetadata> = {
       <article class="reconhecimentos-band reconhecimentos-band--media-first reconhecimento-destaque" data-reveal-block>
         <div class="reconhecimentos-band__media">
           <VideoPlayer
-            src="/videos/onu-discurso.mp4"
+            src={videoUrl('onu-discurso.mp4')}
             poster={onuImage}
             posterAlt={`${en ? 'Video' : 'Vídeo'}: ${onu.titulo}`}
             title={onu.titulo}
