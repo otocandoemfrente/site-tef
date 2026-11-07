@@ -2,7 +2,7 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  base: '/site-tef',
+  base: '/',
   trailingSlash: 'always',
 
   i18n: {
