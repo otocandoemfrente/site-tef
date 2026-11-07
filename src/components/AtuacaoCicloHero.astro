@@ -220,6 +220,7 @@ const finaleParticles = [
     position: sticky;
     top: var(--header-height);
     min-height: calc(100vh - var(--header-height));
+    min-height: calc(100svh - var(--header-height));
     display: flex;
     align-items: center;
   }
@@ -259,6 +260,23 @@ const finaleParticles = [
     max-width: 34rem;
     margin-inline: auto;
     aspect-ratio: 1 / 1;
+  }
+
+  /*
+    Celular: a seção fica presa (sticky) enquanto se rola, então o círculo + o texto da etapa precisam caber na parte
+    VISÍVEL da tela (100svh, já descontando a barra do navegador) — senão o fim do texto fica pra fora e não dá pra ler.
+    O círculo encolhe o necessário pra deixar ~17rem pro texto (nome + descrição mais longa, em até 5 linhas), e só a
+    etapa ativa fica à vista (as outras quatro, mesmo recolhidas, somavam ~230px e empurravam o texto pra fora).
+  */
+  @media (max-width: 719px) {
+    .ciclo-hero__frame {
+      width: min(100%, 34rem, max(14rem, calc(100vh - var(--header-height) - 17rem)));
+      width: min(100%, 34rem, max(14rem, calc(100svh - var(--header-height) - 17rem)));
+    }
+
+    .ciclo-hero.is-js .ciclo-hero__step:not(.is-active) {
+      display: none;
+    }
   }
 
   /* Telas baixas: o círculo encolhe pra caber inteiro entre o cabeçalho e o rodapé da tela. */

@@ -39,14 +39,14 @@ const times = timesData.times as Time[];
   talentos), todos acima ou abaixo do "363", nunca ao lado dele na mesma altura.
 */
 const layout: Record<string, { x: number; y: number; xm: number; ym: number; scale: number }> = {
-  pedagogico: { x: 13, y: 16, xm: 27, ym: 22, scale: 0.98 },
-  comunicacao: { x: 50, y: 6, xm: 50, ym: 8, scale: 1 },
-  gestao: { x: 87, y: 16, xm: 73, ym: 22, scale: 1.03 },
-  operacional: { x: 6, y: 50, xm: 17, ym: 33, scale: 0.96 },
-  financeiro: { x: 94, y: 50, xm: 83, ym: 33, scale: 1 },
-  trainees: { x: 15, y: 85, xm: 22, ym: 71, scale: 0.95 },
-  dr: { x: 85, y: 85, xm: 78, ym: 71, scale: 1 },
-  talentos: { x: 50, y: 96, xm: 50, ym: 88, scale: 0.96 },
+  pedagogico: { x: 13, y: 16, xm: 27, ym: 17, scale: 0.98 },
+  comunicacao: { x: 50, y: 6, xm: 50, ym: 6, scale: 1 },
+  gestao: { x: 87, y: 16, xm: 73, ym: 17, scale: 1.03 },
+  operacional: { x: 6, y: 50, xm: 20, ym: 28, scale: 0.96 },
+  financeiro: { x: 94, y: 50, xm: 80, ym: 28, scale: 1 },
+  trainees: { x: 15, y: 85, xm: 22, ym: 72, scale: 0.95 },
+  dr: { x: 85, y: 85, xm: 78, ym: 72, scale: 1 },
+  talentos: { x: 50, y: 96, xm: 50, ym: 91, scale: 0.96 },
 };
 
 /*
@@ -238,11 +238,15 @@ const nodes = times.map((t, i) => {
     height: 88%;
   }
 
+  /* Celular: palco mais alto (5/8) pra os oito times + o "363" caberem sem se tocar — o número ocupa uma fatia
+     bem maior da largura do que no desktop. Em telas baixas a largura encolhe junto (a altura nunca passa do que
+     cabe entre o cabeçalho e o fim da tela), mantendo a proporção — nada fica cortado. */
   @media (max-width: 719px) {
     .mapa-times__stage {
-      width: 96%;
-      aspect-ratio: 5 / 7;
-      max-width: 28rem;
+      width: min(96%, 28rem, calc((100vh - var(--header-height) - 2rem) * 0.625));
+      width: min(96%, 28rem, calc((100svh - var(--header-height) - 2rem) * 0.625));
+      aspect-ratio: 5 / 8;
+      height: auto;
     }
   }
 
@@ -521,7 +525,8 @@ const nodes = times.map((t, i) => {
     */
     .mapa-times__node {
       white-space: normal;
-      max-width: 7.5rem;
+      max-width: 8.75rem;
+      padding: 0.5rem 0.6rem;
       text-align: center;
     }
   }
@@ -771,6 +776,11 @@ const nodes = times.map((t, i) => {
       z-index: 5;
     }
 
+    .mapa-times__mobile-panel[data-pos='top'] {
+      top: 0.75rem;
+      bottom: auto;
+    }
+
     .mapa-times__mobile-panel.is-visible {
       opacity: 1;
       visibility: visible;
@@ -787,6 +797,33 @@ const nodes = times.map((t, i) => {
       .mapa-times__mobile-panel {
         transition: opacity 0.18s ease, visibility 0.18s;
       }
+    }
+  }
+
+  /*
+    Celular — ajustes que precisam vir DEPOIS das regras-base acima (mesma especificidade: vence a última):
+    - o numeral cabe inteiro na própria caixa (antes: 106px de fonte → ~190px de largura dentro de uma caixa de
+      ~128px, invadindo os times vizinhos) e a legenda ganha largura pra quebrar em poucas linhas;
+    - o nome dos times fica menor e mais fechado: "COMUNICAÇÃO" / "OPERACIONAL" passavam da caixa (padding de 1rem
+      de cada lado + max-width de 7.5rem deixavam só ~88px pra palavras de ~110px).
+  */
+  @media (max-width: 719px) {
+    .mapa-times__core {
+      max-width: 62%;
+    }
+
+    .mapa-times__number {
+      font-size: clamp(4rem, 19vw, 5.5rem);
+    }
+
+    .mapa-times__number-label {
+      font-size: 0.9375rem;
+    }
+
+    .mapa-times__node-name {
+      font-size: 0.8125rem;
+      letter-spacing: 0.03em;
+      line-height: 1.25;
     }
   }
 </style>
@@ -897,6 +934,10 @@ const nodes = times.map((t, i) => {
           panelNota.hidden = !nota;
           panelNota.textContent = nota?.textContent ?? '';
         }
+        // O painel fica do lado OPOSTO ao do módulo tocado (times da metade de baixo → painel em cima, e vice-versa),
+        // pra nunca cobrir justamente o time que a pessoa acabou de tocar.
+        const ym = parseFloat(activeWrap.style.getPropertyValue('--ym'));
+        panel.dataset.pos = ym > 55 ? 'top' : 'bottom';
         panel.classList.add('is-visible');
       }
     }

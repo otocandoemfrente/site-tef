@@ -136,6 +136,10 @@ const dataMap = JSON.stringify(
       {kicker && <h2 class="tm__titulo">{kicker}</h2>}
     </div>
 
+    <!-- Celular/tablet: a instrução vem ANTES do círculo (é ela que diz o que fazer com ele). O painel de explicação
+         só aparece, abaixo da lista de tópicos, depois que algo é tocado. Em telas largas este parágrafo some. -->
+    <p class="tm__hint" data-tm-hint>{lede}</p>
+
     <!--
       Painel de explicação: um ÚNICO bloco com dois estados que se substituem (nunca coexistem) — a instrução
       ("Passe o cursor...") em repouso, ou a explicação do tópico/etapa em foco. A troca tem fade suave.
@@ -286,12 +290,22 @@ const dataMap = JSON.stringify(
   .tm__layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'head' 'stage' 'panel';
+    grid-template-areas: 'head' 'hint' 'stage' 'panel';
     gap: 1.5rem;
   }
 
   .tm__head {
     grid-area: head;
+  }
+
+  .tm__hint {
+    grid-area: hint;
+    margin: 0;
+    max-width: 30rem;
+    font-size: var(--text-h3);
+    font-weight: 500;
+    line-height: var(--leading-h3);
+    color: var(--color-text);
   }
 
   .tm__stage {
@@ -321,6 +335,11 @@ const dataMap = JSON.stringify(
     /* Folga lateral pros rótulos que saem do quadro (Intervenção à direita, Impacto à esquerda). */
     .tm__stage {
       padding-inline: 1.5rem;
+    }
+
+    /* Em tela larga a instrução vive no painel, ao lado do círculo. */
+    .tm__hint {
+      display: none;
     }
   }
 
@@ -766,6 +785,14 @@ const dataMap = JSON.stringify(
       display: block;
     }
 
+    /* A instrução já está acima do círculo: o painel só aparece quando há uma explicação a mostrar. */
+    .tm__panel.is-idle {
+      display: none;
+    }
+    .tm__panel {
+      min-height: 0;
+    }
+
     .tm__item,
     .tm__item.is-shown {
       display: none;
@@ -863,6 +890,8 @@ const dataMap = JSON.stringify(
       ? (panel.dataset.tmDefaultText ?? '').replace('Passe o cursor sobre', 'Toque em').replace('Hover over', 'Tap')
       : (panel.dataset.tmDefaultText ?? '');
     if (touchOnly) panelText.textContent = defaultText;
+    const hintEl = root.querySelector<HTMLElement>('[data-tm-hint]');
+    if (hintEl) hintEl.textContent = defaultText;
 
     const dome = root.querySelector<SVGGElement>('[data-tm-dome]')!;
     const gArcs = root.querySelector<SVGGElement>('[data-tm-arcs]')!;
