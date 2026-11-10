@@ -15,6 +15,8 @@ import onuImage from '../assets/images/onu-discurso.png';
 import kauanImage from '../assets/images/kauan-retrato.jpg';
 import atuacaoPreviewImage from '../assets/images/atuacao-preview-turma.jpg';
 import ingohLogo from '../assets/images/INGOH-MARCA.webp';
+import globoLogo from '../assets/images/globo-logo-1024x293.png';
+import lalaLogo from '../assets/images/lala-logo.png';
 import qrPixImage from '../assets/images/QR_code.jpg';
 import { getContent } from '../i18n/content';
 import { prefix } from '../i18n/locale';
@@ -80,11 +82,14 @@ const onuTextoResumo = onu.texto.split('. ')[0] + '.';
 
 // Faixa "Parceiros e apoiadores" — logos importados à parte (o JSON/markdown de conteúdo não
 // pode importar assets do Astro) e casados por nome, mesmo padrão já usado pras fotos de
-// pessoas em faca-parte.astro. Só o INGOH existe hoje; adicionar um novo parceiro no futuro é
-// só importar o arquivo, adicionar uma entrada aqui e um item em `reconhecimentosPreview.partners`
-// no home.md — nunca inventar um logo/parceiro que não tenha asset real.
-const partnerLogos: Record<string, ImageMetadata> = {
-  'INGOH — Instituto Goiano de Oncologia e Hematologia': ingohLogo,
+// pessoas em faca-parte.astro. Adicionar um novo parceiro é importar o arquivo, adicionar uma entrada
+// aqui e um item em `reconhecimentosPreview.partners` no home.md (nos DOIS idiomas) — nunca inventar um
+// logo/parceiro que não tenha asset real. `scale` ajusta a altura de logos de proporção muito diferente
+// (o da LALA é quase quadrado/vertical e ficaria pequeno na mesma altura dos logos largos).
+const partnerLogos: Record<string, { src: ImageMetadata; scale?: number }> = {
+  'INGOH — Instituto Goiano de Oncologia e Hematologia': { src: ingohLogo },
+  'Globo': { src: globoLogo },
+  'LALA': { src: lalaLogo, scale: 1.35 },
 };
 
 ---
@@ -282,7 +287,7 @@ const partnerLogos: Record<string, ImageMetadata> = {
             home.reconhecimentosPreview.partners.map((partner: { nome: string }) =>
               partnerLogos[partner.nome] ? (
                 <div class="partners__item">
-                  <Image src={partnerLogos[partner.nome]} alt={partner.nome} class="partners__logo" widths={[200, 320, 440]} sizes="220px" />
+                  <Image src={partnerLogos[partner.nome].src} alt={partner.nome} class="partners__logo" style={`--partner-scale:${partnerLogos[partner.nome].scale ?? 1}`} widths={[200, 320, 440]} sizes="260px" />
                 </div>
               ) : null
             )
@@ -892,7 +897,7 @@ const partnerLogos: Record<string, ImageMetadata> = {
   .partners__logo {
     display: block;
     width: auto;
-    height: clamp(2.75rem, 2.25rem + 2vw, 3.75rem);
+    height: calc(clamp(2.75rem, 2.25rem + 2vw, 3.75rem) * var(--partner-scale, 1));
   }
 
   /*

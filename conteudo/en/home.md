@@ -69,6 +69,8 @@ reconhecimentosPreview:
   partnersKicker: 'Partners and supporters'
   partners:
     - nome: 'INGOH — Instituto Goiano de Oncologia e Hematologia'
+    - nome: 'Globo'
+    - nome: 'LALA'
 
 ctaFinal:
   title: 'Be someone who believes!'
