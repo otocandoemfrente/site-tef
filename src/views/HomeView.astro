@@ -17,6 +17,7 @@ import atuacaoPreviewImage from '../assets/images/atuacao-preview-turma.jpg';
 import ingohLogo from '../assets/images/INGOH-MARCA.webp';
 import globoLogo from '../assets/images/globo-logo-1024x293.png';
 import lalaLogo from '../assets/images/lala-logo.png';
+import watsonLogo from '../assets/images/watson-institute-logo.png';
 import qrPixImage from '../assets/images/QR_code.jpg';
 import { getContent } from '../i18n/content';
 import { prefix } from '../i18n/locale';
@@ -88,8 +89,9 @@ const onuTextoResumo = onu.texto.split('. ')[0] + '.';
 // (o da LALA é quase quadrado/vertical e ficaria pequeno na mesma altura dos logos largos).
 const partnerLogos: Record<string, { src: ImageMetadata; scale?: number }> = {
   'INGOH — Instituto Goiano de Oncologia e Hematologia': { src: ingohLogo },
-  'Globo': { src: globoLogo },
+  'Globo': { src: globoLogo, scale: 0.7 },
   'LALA': { src: lalaLogo, scale: 1.35 },
+  'Watson Institute': { src: watsonLogo, scale: 0.8 },
 };
 
 ---

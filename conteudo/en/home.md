@@ -71,6 +71,7 @@ reconhecimentosPreview:
     - nome: 'INGOH — Instituto Goiano de Oncologia e Hematologia'
     - nome: 'Globo'
     - nome: 'LALA'
+    - nome: 'Watson Institute'
 
 ctaFinal:
   title: 'Be someone who believes!'
