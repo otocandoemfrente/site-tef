@@ -102,6 +102,8 @@ const partnerLogos: Record<string, ImageMetadata> = {
         <span>{estadosCurto} {en ? 'states' : 'estados'}</span>
         <span aria-hidden="true">·</span>
         <span>{escolasItem?.valor} {en ? 'public schools' : 'escolas públicas'}</span>
+        <span aria-hidden="true">·</span>
+        <span>{en ? 'Middle School' : 'Ensino Fundamental II'}</span>
       </p>
       <h1 class="hero__title">
         {hero.missionLines.map((line: string) => <span class="hero__line">{line}</span>)}
@@ -370,12 +372,16 @@ const partnerLogos: Record<string, ImageMetadata> = {
     e entrelinha apertada para as linhas lerem como um bloco só. Claro porque
     agora fica sobre o véu azul da foto, não mais sobre o off-white da página.
   */
+  /* A frase de abertura agora é uma só, mais longa que as três linhas curtas de antes ("Impulsionando jovens líderes para
+     reverter a crise da evasão escolar nas Américas."): a fonte desceu de até 8,5rem pra até 5,25rem e a quebra é
+     natural, com `text-wrap: balance` pra as linhas ficarem parecidas e nunca sobrar uma palavra sozinha. */
   .hero__title {
     color: var(--color-bg);
-    font-size: clamp(2.75rem, 9.2vw, 8.5rem);
+    font-size: clamp(2.25rem, 1.2rem + 4.2vw, 5.25rem);
     font-weight: 500;
-    line-height: 0.98;
+    line-height: 1.02;
     letter-spacing: -0.035em;
+    text-wrap: balance;
     display: flex;
     flex-direction: column;
   }

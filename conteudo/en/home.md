@@ -8,9 +8,7 @@ about:
 
 hero:
   missionLines:
-    - 'Making the heartland'
-    - 'fertile ground'
-    - 'for inspiration'
+    - 'Championing high-potential youth to reverse the dropout crisis in the Americas.'
   purpose: 'All a child needs is someone who truly believes in them.'
   imageAlt: 'Students gathered around a table during a Journey workshop, drawing on a poster'
 

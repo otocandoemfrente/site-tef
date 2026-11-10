@@ -5,7 +5,7 @@ description: 'O Tocando em Frente transforma a educação no Ensino Fundamental 
 about:
   # Usado na meta description e no cálculo da linha de estatística do hero — não vira mais uma seção própria na Home (ver protótipo aprovado v2).
   text: 'O Tocando em Frente transforma a educação no Ensino Fundamental II por meio de um modelo totalmente liderado por jovens, que utiliza o brincar como ferramenta de aprendizagem para fortalecer o pertencimento, o engajamento e ampliar os caminhos dos estudantes para novas oportunidades.'
-  foundingYear: 2022 # ano do estatuto (comentário do doc de textos); "estudantes impactados" em numeros.json segue contando desde 2021
+  foundingYear: 2022 # ano do estatuto (comentário do doc de textos); os números acumulados (numeros.json) também contam desde 2022
 
 hero:
   # v5: foto real (enviada por Isabella) como fundo, com véu azul translúcido —
@@ -13,9 +13,7 @@ hero:
   # A quebra em 3 linhas é fixa e faz parte do desenho — por isso cada linha é um
   # item, não uma frase única quebrada pelo navegador.
   missionLines:
-    - 'Tornar o interior'
-    - 'terreno fértil'
-    - 'para inspiração'
+    - 'Impulsionando jovens líderes para reverter a crise da evasão escolar nas Américas.'
   purpose: 'Tudo o que uma criança precisa é de alguém que acredite nela de verdade.'
   imageAlt: 'Estudantes reunidos em torno de uma mesa durante uma oficina da Jornada, desenhando em um cartaz'
 
