@@ -49,3 +49,6 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # O site tem ~100 MB (vídeos) e a publicação no GitHub Pages leva de 7 a 10+ minutos; o padrão (10 min) dava timeout.
+          timeout: 1500000
